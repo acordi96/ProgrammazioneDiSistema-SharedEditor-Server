@@ -112,3 +112,11 @@ void Participant::process(const MessageSymbol &m) {
         _symbol.erase(_symbol.begin()+myIndex);
     }
 }
+
+const std::string &Participant::getColor() const {
+    return color;
+}
+
+void Participant::setColor(const std::string &color) {
+    Participant::color = color;
+}

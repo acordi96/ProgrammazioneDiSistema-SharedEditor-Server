@@ -18,8 +18,9 @@ private:
     std::string response;
     std::string checkMail(const QString mail);
     std::string encPsw(const std::string password);
+    QString generateRandomColor();
 public:
-    std::string handleLogin(const std::string user, const std::string password);
+    std::string handleLogin(const std::string user, const std::string password, QString& color);
     std::string handleSignup(const std::string email,const std::string user,const std::string password);
 
 };

@@ -13,18 +13,28 @@ QSqlDatabase ManagementDB::connect(){
     db.setDatabaseName("login");
     return db;
 }
+QString ManagementDB::generateRandomColor() {
+    std::string hex = "abcdef0123456789";
+    int n = hex.length();
+    std::string color = "#88"; //alpha will be fixed to 88
+    for (int i=1; i<=6; i++)
+        color.push_back(hex[rand() % n]);
+    return(QString::fromUtf8(color.data(), color.size()));
+}
 
-std::string ManagementDB::handleLogin(const std::string user,const std::string password) {
+std::string ManagementDB::handleLogin(const std::string user,const std::string password,QString& color) {
     QSqlDatabase db  = connect();
     if (db.open()) {
         QSqlQuery query;
         QString username = QString::fromUtf8(user.data(), user.size());
         QString psw = QString::fromUtf8(password.data(), password.size());
-        query.prepare("SELECT username, password FROM user_login WHERE username='"+username+"' and password='"+psw+"'");
+        query.prepare("SELECT username, password, color FROM user_login WHERE username='"+username+"' and password='"+psw+"'");
         if(query.exec()) {
-            if(query.next())
+            if(query.next()) {
+                color = query.value(2).toString();
+                std::cout << "L'utente ha colore " << color.toStdString() << std::endl;
                 response = "LOGIN_SUCCESS";
-            else
+            }else
                 response = "LOGIN_ERROR";
         }else {
             response = "QUERY_ERROR";
@@ -47,19 +57,32 @@ std::string ManagementDB::handleSignup(const std::string e,const std::string use
         QString email = QString::fromUtf8(e.data(), e.size());
         QString user  = QString::fromUtf8(username.data(), username.size());
         QString password = QString::fromUtf8(psw.data(), psw.size());
-
+        QString color = generateRandomColor();
         if(checkMail(email)=="\"EMAIL_ERROR") {
             db.close();
             return "EMAIL_ERROR";
         }
-        query.prepare("INSERT INTO user_login(email, username, password) VALUES ('"+email+"', '"+user+"', '"+password+"')");
-        if(query.exec()) {
-            db.close();
-            return "SIGNUP_SUCCESS";
-        }else {
-            db.close();
-            return "SIGNUP_ERROR";
-        }
+        query.prepare("SELECT username FROM user_login WHERE username='"+user+"'");
+        if(query.exec()){
+            if(query.next())
+                return "SIGNUP_ERROR";
+            else{
+                QSqlQuery query2;
+                query2.prepare("INSERT INTO user_login(email, username, password, color) VALUES ('"+email+"', '"+user+"', '"+password+"','"+color+"')");
+                if(query2.exec()) {
+                    db.close();
+                    return "SIGNUP_SUCCESS";
+                }else {
+                    db.close();
+                    return "SIGNUP_ERROR";
+                }
+            }
+
+
+        }else
+            return "CONNESSION_ERROR";
+
+
     } else {
         return "CONNESSION_ERROR";
     }

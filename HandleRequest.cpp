@@ -17,7 +17,7 @@ void HandleRequest::start(int participantId) {
 }
 void HandleRequest::do_read_header() {
     auto self(shared_from_this());
-    memset(read_msg_.data(), 0, read_msg_.length()); //VERY IMPORTANT, otherwise rubbish remains inside socket
+    memset(read_msg_.data(), 0, read_msg_.length());
     boost::asio::async_read(socket,boost::asio::buffer(read_msg_.data(), message::header_length),[this, self](boost::system::error_code ec, std::size_t /*length*/)
         {
             if (!ec && read_msg_.decode_header())
@@ -108,12 +108,13 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         std::string username, password;
         username = js.at("username").get<std::string>();
         password = js.at("password").get<std::string>();
-        std::string resDB = manDB.handleLogin(username, password);
+        QString colorParticiapant = "#00ffffff";
+        std::string resDB = manDB.handleLogin(username, password, colorParticiapant);
         if(resDB == "LOGIN_SUCCESS"){
             shared_from_this()->setUsername(username);
-            shared_from_this()->setUsername(username);
+            shared_from_this()->setColor(colorParticiapant.toStdString());
         }
-        json j = json{{"response", resDB}};
+        json j = json{{"response", resDB}, {"username", username}, {"colorUser", colorParticiapant.toStdString()}};
         std::string j_string = j.dump();
         return  j_string;
     }

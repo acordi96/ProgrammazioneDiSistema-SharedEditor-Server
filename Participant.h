@@ -26,6 +26,10 @@ public:
     void setCurrentFile(const std::string &currentFile);
     void setSymbol(const std::vector<Symbol> &symbol);
 
+    const std::string &getColor() const;
+
+    void setColor(const std::string &color);
+
     //metodi get
     const std::vector<Symbol> &getSymbol() const;
     std::string getUsername();
