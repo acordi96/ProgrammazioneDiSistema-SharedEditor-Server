@@ -9,10 +9,11 @@
 #include <set>
 #include <list>
 #include <deque>
+#include <queue>
 #include "Participant.h"
 #include <map>
 typedef std::deque<message> message_queue;
-typedef std::deque<MessageSymbol> msgInfo_queue;
+typedef std::queue<MessageSymbol> msgInfo_queue;
 typedef std::shared_ptr<Participant> participant_ptr;
 
 

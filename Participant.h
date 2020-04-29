@@ -35,7 +35,7 @@ public:
     std::string getUsername();
     int getId() const;
     const std::string &getCurrentFile() const;
-    //metodi per la concoorenza
+    //metodi per la concorrenza
     MessageSymbol localInsert(int index, char c);
     MessageSymbol localErase(int index);
     void process(const MessageSymbol &m);

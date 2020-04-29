@@ -13,7 +13,7 @@
 class Symbol {
 private:
     char character;
-    //contient l'identificativo del client e il contatore con il numero di inerimenti fatti
+    //contiene l'identificativo del client e il contatore con il numero di inserimenti fatti
     std::pair<int, int> idUser;
     std::vector<int> posizione;
 public:

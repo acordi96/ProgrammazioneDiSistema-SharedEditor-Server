@@ -44,7 +44,7 @@ void Room::setRoomMap(const std::map<std::string, std::vector<Symbol>> &roomMap)
 }
 
 void Room::send(const MessageSymbol &m) {
-    infoMsgs_.push_back(m);
+    infoMsgs_.push(m);
 }
 //questo serve a mandare la stessa coda di messaggi a tutti i partecipanti
 void Room::dispatchMessages() {
@@ -53,6 +53,6 @@ void Room::dispatchMessages() {
             if (it->getId() != infoMsgs_.front().getId())
                 it->process(infoMsgs_.front());
         }
-        infoMsgs_.pop_front();
+        infoMsgs_.pop();
     }
 }
