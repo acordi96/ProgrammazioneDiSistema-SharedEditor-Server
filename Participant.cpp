@@ -41,7 +41,7 @@ MessageSymbol Participant::localInsert(int index, char c) {
     Symbol s(c, std::make_pair(_siteId, ++count), vector);
 
     _symbol.insert(_symbol.begin()+index, s);
-    MessageSymbol m(1, getId(), s, index);
+    MessageSymbol m(0, getId(), s, index);
     return m;
 
 }
@@ -75,10 +75,10 @@ std::vector<int> Participant::generatePos(int index, char c) {
         }
     }
 }
-MessageSymbol Participant::localErase(int index){
-    Symbol s = _symbol.at(index);
-    _symbol.erase(_symbol.begin()+index);
-    MessageSymbol m(2, getId(), s);
+MessageSymbol Participant::localErase(int startIndex,int endIndex){
+    Symbol s = _symbol.at(startIndex);
+    _symbol.erase(_symbol.begin()+startIndex,_symbol.begin()+endIndex);
+    MessageSymbol m(1, getId(), s);
     return m;
 }
 const std::vector<Symbol> &Participant::getSymbol() const {
@@ -102,14 +102,24 @@ int Participant::comparePos(std::vector<int> currVetPos, std::vector<int> newVet
 }
 
 void Participant::process(const MessageSymbol &m) {
-    if(m.getType() == 1){
+    auto type = m.getType();
+    auto index = m.getNewIndex();
+    if(type == 0){
+        /* INSERT */
         //caso di inserimento
-        int myIndex = _symbol.size();
-        _symbol.insert(_symbol.begin()+myIndex, m.getSymbol());
+        //int myIndex = _symbol.size();
+        _symbol.insert(_symbol.begin()+index, m.getSymbol());
 
-    }else if(m.getType() == 1){
-        int myIndex = _symbol.size();
-        _symbol.erase(_symbol.begin()+myIndex);
+    }else if(type == 1){
+        /* REMOVE */
+        //int myIndex = _symbol.size();
+        //_symbol.erase(_symbol.begin()+myIndex);
+        for(auto it=_symbol.begin();it != _symbol.end(); it++){
+            if(it->getPosizione()==m.getSymbol().getPosizione()){
+                _symbol.erase(it);
+                break;
+            }
+        }
     }
 }
 

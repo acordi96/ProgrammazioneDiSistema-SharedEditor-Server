@@ -45,7 +45,11 @@ void HandleRequest::do_read_body() {
                 std::string response = handleRequestType(messageFromClient, requestType, partecipantId);
                 if(requestType == "insert"){
                     sendAllClient(response, partecipantId);
-                }else if(requestType=="request_login"  || requestType=="request_signup"){
+                }
+                else if(requestType == "remove"){
+                    sendAllClient(response,partecipantId);
+                }
+                else if(requestType=="request_login"  || requestType=="request_signup"){
                     sendAtClient(response);
                 }
 
@@ -143,20 +147,30 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         return j_string;
     }
     if(type_request=="remove"){
+       /*
         int index = js.at("corpo").get<int>();
         MessageSymbol messS = localErase(index);
         room_.send(messS);
         room_.dispatchMessages();
-        json j = json{{"response", "insert_res"}, {"corpo", index}};
+        json j = json{{"response", "remove_res"}, {"corpo", index}};
         std::string j_string = j.dump();
         return j_string;
+    */
+       int startIndex = js.at("start").get<int>();
+       int endIndex = js.at("end").get<int>();
+       MessageSymbol messS = localErase(startIndex,endIndex);
+       room_.send(messS);
+       room_.dispatchMessages();
+       json j = json{{"response","remove_res"},{"start",startIndex},{"end",endIndex}};
+       std::string j_string = j.dump();
+       return j_string;
     }
     return type_request;
 }
 void HandleRequest::deliver(const message& msg)
 {
     bool write_in_progress = !write_msgs_.empty();
-    //aggiungo un nuovo elemento alla fine della cosa
+    //aggiungo un nuovo elemento alla fine della coda
     write_msgs_.push_back(msg);
     if (!write_in_progress) {
         do_write();

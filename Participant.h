@@ -37,7 +37,7 @@ public:
     const std::string &getCurrentFile() const;
     //metodi per la concorrenza
     MessageSymbol localInsert(int index, char c);
-    MessageSymbol localErase(int index);
+    MessageSymbol localErase(int startIndex,int endIndex);
     void process(const MessageSymbol &m);
 };
 
