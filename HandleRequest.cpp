@@ -2,6 +2,7 @@
 // Created by Sam on 01/apr/2020.
 //
 
+#include <fstream>
 #include "HandleRequest.h"
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "InfiniteRecursion"
@@ -49,7 +50,7 @@ void HandleRequest::do_read_body() {
                 else if(requestType == "remove"){
                     sendAllClient(response,partecipantId);
                 }
-                else if(requestType=="request_login"  || requestType=="request_signup"){
+                else if(requestType=="request_login"  || requestType=="request_signup" || requestType=="request_new_file"){
                     sendAtClient(response);
                 }
 
@@ -70,7 +71,7 @@ void HandleRequest::sendAtClient(std::string j_string){
     std::memcpy(msg.body(), j_string.data(), msg.body_length());
     msg.body()[msg.body_length()] = '\0';
     msg.encode_header();
-    std::cout <<"Risposta al sono client: "<< msg.body() << std::endl;
+    std::cout <<"Risposta al client: "<< msg.body() << std::endl;
     shared_from_this()->deliver(msg);
 
 }
@@ -164,6 +165,22 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
        json j = json{{"response","remove_res"},{"start",startIndex},{"end",endIndex}};
        std::string j_string = j.dump();
        return j_string;
+    }
+
+    if (type_request == "request_new_file"){
+        std::cout << "Nuovo file\n";
+        json j = json{{"response","new_file_created"}};
+        std::string j_string = j.dump();
+
+        // creo il file nuovo
+        std::string nomeFile = "C:/Users/gabriele/Desktop/"+js.at("name").get<std::string>()+".txt";
+        std::ofstream oFile(nomeFile, std::ios_base::out | std::ios_base::trunc);
+
+        if (oFile.is_open()){
+            std::cout << "\n FILE CREATO \n";
+        }
+        oFile.close();
+        return j_string;
     }
     return type_request;
 }
