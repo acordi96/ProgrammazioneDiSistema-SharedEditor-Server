@@ -51,7 +51,7 @@ void HandleRequest::do_read_body() {
                 else if(requestType == "remove"){
                     sendAllClient(response,partecipantId);
                 }
-                else if(requestType=="request_login"  || requestType=="request_signup" || requestType=="request_new_file"){
+                else if(requestType=="request_login"  || requestType=="request_signup" || requestType=="request_new_file" ){
                     sendAtClient(response);
                 }
 
@@ -123,8 +123,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         json j = json{{"response", resDB}, {"username", username}, {"colorUser", colorParticiapant.toStdString()}};
         std::string j_string = j.dump();
         return  j_string;
-    }
-    if(type_request=="request_signup"){
+    } else if(type_request=="request_signup"){
         //prendi username e psw
         std::string username, password, email;
         username = js.at("username").get<std::string>();
@@ -142,11 +141,11 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         json j = json{{"response", resDB}};
         std::string j_string = j.dump();
         return  j_string;
-    }
-    if(type_request=="R_LOGOUT"){
-
-    }
-    if(type_request=="insert"){
+    } else if(type_request=="R_LOGOUT"){
+        json j = json{{"response", "logout"}};
+        std::string j_string = j.dump();
+        return j_string;
+    } else if(type_request=="insert"){
         std::pair<int, char> message = js.at("corpo").get<std::pair<int, char>>();
         MessageSymbol messS = localInsert(message.first, message.second);
         room_.send(messS);
@@ -155,8 +154,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         json j = json{{"response", "insert_res"}, {"corpo", corpo}};
         std::string j_string = j.dump();
         return j_string;
-    }
-    if(type_request=="remove"){
+    } else if(type_request=="remove"){
        /*
         int index = js.at("corpo").get<int>();
         MessageSymbol messS = localErase(index);
@@ -174,25 +172,35 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
        json j = json{{"response","remove_res"},{"start",startIndex},{"end",endIndex}};
        std::string j_string = j.dump();
        return j_string;
-    }
-
-    if (type_request == "request_new_file"){
+    } else if (type_request == "request_new_file"){
         std::cout << "Nuovo file\n";
-        json j = json{{"response","new_file_created"}};
-        std::string j_string = j.dump();
 
         // creo il file nuovo
-        std::string nomeFile = "C:/Users/gabriele/Desktop/PDS/Server/serverPDS/fileSystem/"+js.at("username").get<std::string>()+"/"q1awd   A<\32W\11\      \6  QWERTYUIOTRE+js.at("name").get<std::string>()+".txt";
-        boost::filesystem::ofstream oFile(nomeFile);
-        //std::ofstream oFile(nomeFile, std::ios_base::out | std::ios_base::trunc);
+        std::string nomeFile = "C:/Users/gabriele/Desktop/PDS/Server/serverPDS/fileSystem/"+js.at("username").get<std::string>()+"/"+js.at("name").get<std::string>()+".txt";
+        if (boost::filesystem::exists(nomeFile)){
+            std::cout << "\nil file esiste già";
+            json j = json{{"response","new_file_already_exist"}};
+            std::string j_string = j.dump();
+            return j_string;
+        }else{
+            json j = json{{"response","new_file_created"}};
+            std::string j_string = j.dump();
+            boost::filesystem::ofstream oFile(nomeFile);
+            //std::ofstream oFile(nomeFile, std::ios_base::out | std::ios_base::trunc);
 
-        if (oFile.is_open()){
-            std::cout << "\n FILE CREATO \n";
+            if (oFile.is_open()){
+                std::cout << "\n FILE CREATO \n";
+            }
+            oFile.close();
+            return j_string;
         }
-        oFile.close();
+    } else {
+        std::cout << "nessun match col tipo di richiesta";
+        json j = json{{"response","new_file_created"}};
+        std::string j_string = j.dump();
         return j_string;
+        //return type_request;
     }
-    return type_request;
 }
 void HandleRequest::deliver(const message& msg)
 {
