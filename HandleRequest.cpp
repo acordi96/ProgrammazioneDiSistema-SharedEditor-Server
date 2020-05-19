@@ -4,6 +4,7 @@
 
 #include <fstream>
 #include "HandleRequest.h"
+#include <boost/filesystem.hpp>
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "InfiniteRecursion"
 HandleRequest::HandleRequest(tcp::socket socket, Room& room) : socket(std::move(socket)), room_(room){
@@ -130,6 +131,14 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         password = js.at("password").get<std::string>();
         email = js.at("email").get<std::string>();
         std::string resDB = manDB.handleSignup(email, username, password);
+
+        //se la registrazione va bene, creo la cartella personale per il nuovo utente
+        if (resDB == "SIGNUP_SUCCESS"){
+            std::cout << "\n creazione nuova cartella";
+            std::string path = "C:/Users/gabriele/Desktop/PDS/Server/serverPDS/fileSystem/"+username;
+            boost::filesystem::create_directory(path);
+        }
+
         json j = json{{"response", resDB}};
         std::string j_string = j.dump();
         return  j_string;
@@ -173,8 +182,9 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         std::string j_string = j.dump();
 
         // creo il file nuovo
-        std::string nomeFile = "C:/Users/gabriele/Desktop/"+js.at("name").get<std::string>()+".txt";
-        std::ofstream oFile(nomeFile, std::ios_base::out | std::ios_base::trunc);
+        std::string nomeFile = "C:/Users/gabriele/Desktop/PDS/Server/serverPDS/fileSystem/"+js.at("username").get<std::string>()+"/"q1awd   A<\32W\11\      \6  QWERTYUIOTRE+js.at("name").get<std::string>()+".txt";
+        boost::filesystem::ofstream oFile(nomeFile);
+        //std::ofstream oFile(nomeFile, std::ios_base::out | std::ios_base::trunc);
 
         if (oFile.is_open()){
             std::cout << "\n FILE CREATO \n";

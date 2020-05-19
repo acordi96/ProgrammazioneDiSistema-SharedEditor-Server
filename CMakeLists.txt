@@ -11,6 +11,7 @@ set(Boost_DIR "C:/boost/lib/cmake/Boost-1.72.0")
 
 find_package(Boost CONFIG REQUIRED COMPONENTS regex)
 find_package(Boost CONFIG REQUIRED COMPONENTS thread)
+find_package(Boost CONFIG REQUIRED COMPONENTS fileSystem)
 find_package(Qt5Sql REQUIRED)
 add_executable(ServerPDS main.cpp Server.cpp Server.h HandleRequest.cpp HandleRequest.h ManagementDB.cpp ManagementDB.h Symbol.cpp Symbol.h message.cpp message.h Room.cpp Room.h Participant.cpp Participant.h MessageSymbol.cpp MessageSymbol.h)
 
@@ -21,6 +22,8 @@ list(REMOVE_DUPLICATES LIBRARIES)
 target_link_libraries(ServerPDS ${LIBRARIES})
 target_link_libraries(ServerPDS Boost::thread)
 target_link_libraries(ServerPDS Boost::regex)
+target_link_libraries(ServerPDS Boost::filesystem)
+
 if(MSVC OR MINGW)
     target_link_libraries(ServerPDS ws2_32 mswsock)
 endif()

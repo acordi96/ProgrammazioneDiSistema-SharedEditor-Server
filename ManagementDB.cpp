@@ -65,7 +65,7 @@ std::string ManagementDB::handleSignup(const std::string e,const std::string use
         query.prepare("SELECT username FROM user_login WHERE username='"+user+"'");
         if(query.exec()){
             if(query.next())
-                return "SIGNUP_ERROR";
+                return "SIGNUP_ERROR_DUPLICATE_USERNAME";
             else{
                 QSqlQuery query2;
                 query2.prepare("INSERT INTO user_login(email, username, password, color) VALUES ('"+email+"', '"+user+"', '"+password+"','"+color+"')");
@@ -74,7 +74,7 @@ std::string ManagementDB::handleSignup(const std::string e,const std::string use
                     return "SIGNUP_SUCCESS";
                 }else {
                     db.close();
-                    return "SIGNUP_ERROR";
+                    return "SIGNUP_ERROR_INSERT_FAILED";
                 }
             }
 
@@ -84,7 +84,7 @@ std::string ManagementDB::handleSignup(const std::string e,const std::string use
 
 
     } else {
-        return "CONNESSION_ERROR";
+        return "CONNESSION_ERROR_";
     }
 
 }
