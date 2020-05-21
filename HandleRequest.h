@@ -14,6 +14,7 @@
 #define MAXBUFL 255
 #include <boost/thread.hpp>
 
+
 #include "Server.h"
 #include "Room.h"
 #include "Participant.h"
@@ -36,6 +37,7 @@ private:
     std::string handleRequestType(const json& json, const std::string& type_request, int partecipantId);
     void sendAtClient(std::string response);
     void sendAllClient(std::string responde, const int &id);
+    std::string generateRandomString(int length);
 public:
     void start(int paticipantId);
     void do_write();

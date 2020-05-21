@@ -58,6 +58,7 @@ std::string ManagementDB::handleSignup(const std::string e,const std::string use
         QString user  = QString::fromUtf8(username.data(), username.size());
         QString password = QString::fromUtf8(psw.data(), psw.size());
         QString color = generateRandomColor();
+
         if(checkMail(email)=="\"EMAIL_ERROR") {
             db.close();
             return "EMAIL_ERROR";
@@ -99,4 +100,48 @@ std::string ManagementDB::checkMail(const QString mail){
 }
 std::string ManagementDB::encPsw(const std::string password){
     return "";
+}
+
+std::string ManagementDB::handleNewFile(const std::string user, const std::string file) {
+    QSqlDatabase db  = connect();
+
+    if (db.open()) {
+        QSqlQuery query;
+        QString id = QString::fromUtf8(user.data(),user.size());
+        QString title = QString::fromUtf8(file.data(),file.size());
+        query.prepare("INSERT INTO files(username,titolo) VALUES ('"+id+"','"+title+"')");
+
+        if(query.exec()){
+            db.close();
+            return "FILE_INSERT_SUCCESS";
+        }else {
+            db.close();
+            return "FILE_INSERT_FAILED";
+        }
+
+    } else
+        return "CONNESSION_ERROR_";
+}
+
+std::list<std::string> ManagementDB::takeFiles(const std::string user) {
+    QSqlDatabase db  = connect();
+    if(db.open()){
+        std::cout << "\n entrato nel db \n";
+        QSqlQuery query;
+        QString id = QString::fromUtf8(user.data(),user.size());
+        query.prepare("SELECT titolo FROM files WHERE username = '"+id+"'");
+        if(query.exec()){
+            std::list<std::string> files;
+            while(query.next()){
+                QString title = query.value(0).toString();
+                std::string titolo = title.toStdString();
+                std::cout <<"\n " << titolo << "\n";
+                files.push_back(titolo);
+
+            }
+            return files;
+        }
+
+    }
+    return std::list<std::string>();
 }

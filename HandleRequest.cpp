@@ -5,6 +5,10 @@
 #include <fstream>
 #include "HandleRequest.h"
 #include <boost/filesystem.hpp>
+#include <boost/random.hpp>
+#include <boost/random/random_device.hpp>
+
+
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "InfiniteRecursion"
 HandleRequest::HandleRequest(tcp::socket socket, Room& room) : socket(std::move(socket)), room_(room){
@@ -116,16 +120,19 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         password = js.at("password").get<std::string>();
         QString colorParticiapant = "#00ffffff";
         std::string resDB = manDB.handleLogin(username, password, colorParticiapant);
+        std::list<std::string> risultato;
         if(resDB == "LOGIN_SUCCESS"){
             shared_from_this()->setUsername(username);
             shared_from_this()->setColor(colorParticiapant.toStdString());
+            //recupero tutti i file dell'utente
+            risultato = manDB.takeFiles(username);
         }
-        json j = json{{"response", resDB}, {"username", username}, {"colorUser", colorParticiapant.toStdString()}};
+        json j = json{{"response", resDB}, {"username", username}, {"colorUser", colorParticiapant.toStdString()},{"files",risultato}};
         std::string j_string = j.dump();
         return  j_string;
     } else if(type_request=="request_signup"){
         //prendi username e psw
-        std::string username, password, email;
+        std::string username, email,password;
         username = js.at("username").get<std::string>();
         password = js.at("password").get<std::string>();
         email = js.at("email").get<std::string>();
@@ -183,20 +190,26 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             std::string j_string = j.dump();
             return j_string;
         }else{
-            json j = json{{"response","new_file_created"}};
-            std::string j_string = j.dump();
-            boost::filesystem::ofstream oFile(nomeFile);
-            //std::ofstream oFile(nomeFile, std::ios_base::out | std::ios_base::trunc);
 
-            if (oFile.is_open()){
-                std::cout << "\n FILE CREATO \n";
+            boost::filesystem::ofstream oFile(nomeFile);
+            //metto il file nel db con lo user
+            std::string resDB = manDB.handleNewFile(js.at("username").get<std::string>(),js.at("name").get<std::string>());
+            if(resDB == "FILE_INSERT_SUCCESS"){
+                std::cout << "\nfile inserito nel db correttamente\n";
+                json j = json{{"response","new_file_created"}};
+                std::string j_string = j.dump();
+                return j_string;
+            }else{
+                json j = json{{"response","errore_salvataggio_file_db"}};
+                std::string j_string = j.dump();
+                return j_string;
             }
-            oFile.close();
-            return j_string;
+
+
         }
     } else {
         std::cout << "nessun match col tipo di richiesta";
-        json j = json{{"response","new_file_created"}};
+        json j = json{{"response","general_error"}};
         std::string j_string = j.dump();
         return j_string;
         //return type_request;
@@ -210,4 +223,22 @@ void HandleRequest::deliver(const message& msg)
     if (!write_in_progress) {
         do_write();
     }
+}
+
+std::string HandleRequest::generateRandomString(int length) {
+    std::string chars(
+            "abcdefghijklmnopqrstuvwxyz"
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            "1234567890"
+            "!@#$%^&*()"
+            "`~-_=+[{]{\\|;:'\",<.>/?");
+    std::string salt;
+    boost::random::random_device rng;
+    boost::random::uniform_int_distribution<> index_dist(0, chars.size() - 1);
+    for(int i = 0; i < length; ++i) {
+        salt.append(1,chars[index_dist(rng)]);
+    }
+    //std::cout << std::endl;
+    //return std::__cxx11::string();
+    return salt;
 }
