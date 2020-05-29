@@ -134,8 +134,10 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         //prendi username e psw
         std::string username, email,password;
         username = js.at("username").get<std::string>();
+        std::cout << "\n username ricevuto per la registrazione: " + username;
         password = js.at("password").get<std::string>();
         email = js.at("email").get<std::string>();
+        QString colorParticiapant = "#00ffffff";
         std::string resDB = manDB.handleSignup(email, username, password);
 
         //se la registrazione va bene, creo la cartella personale per il nuovo utente
@@ -143,9 +145,10 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             std::cout << "\n creazione nuova cartella";
             std::string path = "C:/Users/gabriele/Desktop/PDS/Server/serverPDS/fileSystem/"+username;
             boost::filesystem::create_directory(path);
+            shared_from_this()->setUsername(username);
         }
-
-        json j = json{{"response", resDB}};
+        json j = json{{"response", resDB}, {"username", username}, {"colorUser", colorParticiapant.toStdString()}};
+        //json j = json{{"response", resDB}};
         std::string j_string = j.dump();
         return  j_string;
     } else if(type_request=="R_LOGOUT"){
@@ -158,9 +161,12 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         room_.send(messS);
         room_.dispatchMessages();
         std::pair<int, char> corpo(messS.getNewIndex(), message.second);
+        //scrivere sul file, problema recuperare il file su cui scrivere
+
         json j = json{{"response", "insert_res"}, {"corpo", corpo}};
         std::string j_string = j.dump();
         return j_string;
+
     } else if(type_request=="remove"){
        /*
         int index = js.at("corpo").get<int>();
@@ -190,12 +196,18 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             std::string j_string = j.dump();
             return j_string;
         }else{
-
+            //creo il nuovo file
             boost::filesystem::ofstream oFile(nomeFile);
+
             //metto il file nel db con lo user
+            std::cout << "\n username del nuovo file : " << js.at("username").get<std::string>();
             std::string resDB = manDB.handleNewFile(js.at("username").get<std::string>(),js.at("name").get<std::string>());
             if(resDB == "FILE_INSERT_SUCCESS"){
                 std::cout << "\nfile inserito nel db correttamente\n";
+
+                // settare il current file
+                this->setCurrentFile(nomeFile);
+
                 json j = json{{"response","new_file_created"}};
                 std::string j_string = j.dump();
                 return j_string;
