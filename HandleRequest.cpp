@@ -55,7 +55,7 @@ void HandleRequest::do_read_body() {
                 else if(requestType == "remove"){
                     sendAllClient(response,partecipantId);
                 }
-                else if(requestType=="request_login"  || requestType=="request_signup" || requestType=="request_new_file" ){
+                else if(requestType=="request_login"  || requestType=="request_signup" || requestType=="request_new_file" || requestType=="open_file"){
                     sendAtClient(response);
                 }
 
@@ -113,7 +113,7 @@ void HandleRequest::do_write()
     });
 }
 std::string HandleRequest::handleRequestType(const json &js, const std::string &type_request, int partecipantId) {
-    if(type_request=="request_login"){
+    if (type_request == "request_login") {
         //prendi username e psw
         std::string username, password;
         username = js.at("username").get<std::string>();
@@ -121,18 +121,21 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         QString colorParticiapant = "#00ffffff";
         std::string resDB = manDB.handleLogin(username, password, colorParticiapant);
         std::list<std::string> risultato;
-        if(resDB == "LOGIN_SUCCESS"){
+        if (resDB == "LOGIN_SUCCESS") {
             shared_from_this()->setUsername(username);
             shared_from_this()->setColor(colorParticiapant.toStdString());
             //recupero tutti i file dell'utente
             risultato = manDB.takeFiles(username);
         }
-        json j = json{{"response", resDB}, {"username", username}, {"colorUser", colorParticiapant.toStdString()},{"files",risultato}};
+        json j = json{{"response",  resDB},
+                      {"username",  username},
+                      {"colorUser", colorParticiapant.toStdString()},
+                      {"files",     risultato}};
         std::string j_string = j.dump();
-        return  j_string;
-    } else if(type_request=="request_signup"){
+        return j_string;
+    } else if (type_request == "request_signup") {
         //prendi username e psw
-        std::string username, email,password;
+        std::string username, email, password;
         username = js.at("username").get<std::string>();
         std::cout << "\n username ricevuto per la registrazione: " + username;
         password = js.at("password").get<std::string>();
@@ -141,21 +144,23 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         std::string resDB = manDB.handleSignup(email, username, password);
 
         //se la registrazione va bene, creo la cartella personale per il nuovo utente
-        if (resDB == "SIGNUP_SUCCESS"){
+        if (resDB == "SIGNUP_SUCCESS") {
             std::cout << "\n creazione nuova cartella";
-            std::string path = "C:/Users/gabriele/Desktop/PDS/Server/serverPDS/fileSystem/"+username;
+            std::string path = "C:/Users/gabriele/Desktop/PDS/Server/serverPDS/fileSystem/" + username;
             boost::filesystem::create_directory(path);
             shared_from_this()->setUsername(username);
         }
-        json j = json{{"response", resDB}, {"username", username}, {"colorUser", colorParticiapant.toStdString()}};
+        json j = json{{"response",  resDB},
+                      {"username",  username},
+                      {"colorUser", colorParticiapant.toStdString()}};
         //json j = json{{"response", resDB}};
         std::string j_string = j.dump();
-        return  j_string;
-    } else if(type_request=="R_LOGOUT"){
+        return j_string;
+    } else if (type_request == "R_LOGOUT") {
         json j = json{{"response", "logout"}};
         std::string j_string = j.dump();
         return j_string;
-    } else if(type_request=="insert"){
+    } else if (type_request == "insert") {
         std::pair<int, char> message = js.at("corpo").get<std::pair<int, char>>();
         MessageSymbol messS = localInsert(message.first, message.second);
         room_.send(messS);
@@ -163,63 +168,94 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         std::pair<int, char> corpo(messS.getNewIndex(), message.second);
         //scrivere sul file, problema recuperare il file su cui scrivere
 
-        json j = json{{"response", "insert_res"}, {"corpo", corpo}};
+        json j = json{{"response", "insert_res"},
+                      {"corpo",    corpo}};
         std::string j_string = j.dump();
         return j_string;
 
-    } else if(type_request=="remove"){
-       /*
-        int index = js.at("corpo").get<int>();
-        MessageSymbol messS = localErase(index);
+    } else if (type_request == "remove") {
+        /*
+         int index = js.at("corpo").get<int>();
+         MessageSymbol messS = localErase(index);
+         room_.send(messS);
+         room_.dispatchMessages();
+         json j = json{{"response", "remove_res"}, {"corpo", index}};
+         std::string j_string = j.dump();
+         return j_string;
+     */
+        int startIndex = js.at("start").get<int>();
+        int endIndex = js.at("end").get<int>();
+        MessageSymbol messS = localErase(startIndex, endIndex);
         room_.send(messS);
         room_.dispatchMessages();
-        json j = json{{"response", "remove_res"}, {"corpo", index}};
+        json j = json{{"response", "remove_res"},
+                      {"start",    startIndex},
+                      {"end",      endIndex}};
         std::string j_string = j.dump();
         return j_string;
-    */
-       int startIndex = js.at("start").get<int>();
-       int endIndex = js.at("end").get<int>();
-       MessageSymbol messS = localErase(startIndex,endIndex);
-       room_.send(messS);
-       room_.dispatchMessages();
-       json j = json{{"response","remove_res"},{"start",startIndex},{"end",endIndex}};
-       std::string j_string = j.dump();
-       return j_string;
-    } else if (type_request == "request_new_file"){
+    } else if (type_request == "request_new_file") {
         std::cout << "Nuovo file\n";
 
         // creo il file nuovo
-        std::string nomeFile = "C:/Users/gabriele/Desktop/PDS/Server/serverPDS/fileSystem/"+js.at("username").get<std::string>()+"/"+js.at("name").get<std::string>()+".txt";
-        if (boost::filesystem::exists(nomeFile)){
+        std::string nomeFile =
+                "C:/Users/gabriele/Desktop/PDS/Server/serverPDS/fileSystem/" + js.at("username").get<std::string>() +
+                "/" + js.at("name").get<std::string>() + ".txt";
+        if (boost::filesystem::exists(nomeFile)) {
             std::cout << "\nil file esiste già";
-            json j = json{{"response","new_file_already_exist"}};
+            json j = json{{"response", "new_file_already_exist"}};
             std::string j_string = j.dump();
             return j_string;
-        }else{
+        } else {
             //creo il nuovo file
             boost::filesystem::ofstream oFile(nomeFile);
 
             //metto il file nel db con lo user
             std::cout << "\n username del nuovo file : " << js.at("username").get<std::string>();
-            std::string resDB = manDB.handleNewFile(js.at("username").get<std::string>(),js.at("name").get<std::string>());
-            if(resDB == "FILE_INSERT_SUCCESS"){
+            std::string resDB = manDB.handleNewFile(js.at("username").get<std::string>(),
+                                                    js.at("name").get<std::string>());
+            if (resDB == "FILE_INSERT_SUCCESS") {
                 std::cout << "\nfile inserito nel db correttamente\n";
 
                 // settare il current file
                 this->setCurrentFile(nomeFile);
 
-                json j = json{{"response","new_file_created"}};
+                json j = json{{"response", "new_file_created"}};
                 std::string j_string = j.dump();
                 return j_string;
-            }else{
-                json j = json{{"response","errore_salvataggio_file_db"}};
+            } else {
+                json j = json{{"response", "errore_salvataggio_file_db"}};
                 std::string j_string = j.dump();
                 return j_string;
             }
 
 
         }
-    } else {
+    } else if (type_request == "open_file") {
+        std::string nomeFile =
+                "C:/Users/gabriele/Desktop/PDS/Server/serverPDS/fileSystem/" + js.at("username").get<std::string>() +
+                "/" + js.at("name").get<std::string>() + ".txt";
+
+        std::string resDB = manDB.handleOpenFile(js.at("username").get<std::string>(),
+                                                js.at("name").get<std::string>());
+        if (resDB == "FILE_OPEN_SUCCESS") {
+            std::cout << "\nfile aperto correttamente\n";
+
+            // settare il current file
+            this->setCurrentFile(nomeFile);
+
+            json j = json{{"response", "file_opened"}};
+            std::string j_string = j.dump();
+            return j_string;
+        } else {
+            json j = json{{"response", "errore_apertura_file"}};
+            std::string j_string = j.dump();
+            return j_string;
+        }
+
+
+
+
+    }   else {
         std::cout << "nessun match col tipo di richiesta";
         json j = json{{"response","general_error"}};
         std::string j_string = j.dump();

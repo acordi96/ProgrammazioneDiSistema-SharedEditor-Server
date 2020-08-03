@@ -24,6 +24,7 @@ public:
     std::string handleSignup(const std::string email,const std::string user,const std::string password);
     std::string handleNewFile(const std::string user, const std::string file );
     std::list<std::string> takeFiles(const std::string user);
+    std::string handleOpenFile(const std::string user, const std::string file);
 
 };
 

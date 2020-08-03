@@ -102,6 +102,28 @@ std::string ManagementDB::encPsw(const std::string password){
     return "";
 }
 
+std::string ManagementDB::handleOpenFile(const std::string user, const std::string file) {
+    QSqlDatabase db = connect();
+
+    if (db.open()) {
+        QSqlQuery query;
+        QString id = QString::fromUtf8(user.data(), user.size());
+        QString title = QString::fromUtf8(file.data(), file.size());
+        query.prepare("SELECT file FROM files WHERE username ='" + id + "' and titolo = '" + title + "'");
+        if (query.exec()) {
+            //la query dovrebbe ritornare il file
+
+            db.close();
+            return "FILE_OPEN_SUCCESS";
+        } else {
+            db.close();
+            std::cout << "\n apertura fallita\n";
+            return "FILE_OPEN_FAILED";
+        }
+
+    }else
+        return "CONNESSION_ERROR_";
+}
 std::string ManagementDB::handleNewFile(const std::string user, const std::string file) {
     QSqlDatabase db  = connect();
 
