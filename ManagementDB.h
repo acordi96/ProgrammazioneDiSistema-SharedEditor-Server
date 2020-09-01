@@ -11,13 +11,13 @@
 #include <string>
 #include <iostream>
 #include <QString>
+#include "lib/md5.h"
 
 class ManagementDB {
 private:
     QSqlDatabase connect();
     std::string response;
     std::string checkMail(const QString mail);
-    std::string encPsw(const std::string password);
     QString generateRandomColor();
 public:
     std::string handleLogin(const std::string user, const std::string password, QString& color);

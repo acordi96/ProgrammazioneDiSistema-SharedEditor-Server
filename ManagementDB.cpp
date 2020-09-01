@@ -28,6 +28,7 @@ std::string ManagementDB::handleLogin(const std::string user,const std::string p
         QSqlQuery query;
         QString username = QString::fromUtf8(user.data(), user.size());
         QString psw = QString::fromUtf8(password.data(), password.size());
+        psw = QString::fromStdString(md5(psw.toUtf8().constData()));
         query.prepare("SELECT username, password, color FROM user_login WHERE username='"+username+"' and password='"+psw+"'");
         if(query.exec()) {
             if(query.next()) {
@@ -48,7 +49,6 @@ std::string ManagementDB::handleLogin(const std::string user,const std::string p
 std::string ManagementDB::handleSignup(const std::string e,const std::string username,const std::string psw){
     QSqlDatabase db  = connect();
     //TO DO, check per il controllo della mail
-    //TO DO, non salvare la password in chiaro
 
 
     if (db.open()) {
@@ -57,6 +57,7 @@ std::string ManagementDB::handleSignup(const std::string e,const std::string use
         QString email = QString::fromUtf8(e.data(), e.size());
         QString user  = QString::fromUtf8(username.data(), username.size());
         QString password = QString::fromUtf8(psw.data(), psw.size());
+        password = QString::fromStdString(md5(password.toUtf8().constData()));
         QString color = generateRandomColor();
 
         if(checkMail(email)=="\"EMAIL_ERROR") {
@@ -97,9 +98,6 @@ std::string ManagementDB::checkMail(const QString mail){
         return "EMAIL_ERROR";
     }
     return "EMAIL_OK";
-}
-std::string ManagementDB::encPsw(const std::string password){
-    return "";
 }
 
 std::string ManagementDB::handleOpenFile(const std::string user, const std::string file) {
