@@ -21,6 +21,7 @@ void HandleRequest::start(int participantId) {
     room_.join(shared_from_this());
     do_read_header();
 }
+
 void HandleRequest::do_read_header() {
     auto self(shared_from_this());
     memset(read_msg_.data(), 0, read_msg_.length());
@@ -36,6 +37,7 @@ void HandleRequest::do_read_header() {
             }
         });
 }
+
 void HandleRequest::do_read_body() {
     auto self(shared_from_this());
     boost::asio::async_read(socket,boost::asio::buffer(read_msg_.body(), read_msg_.body_length()),
@@ -80,6 +82,7 @@ void HandleRequest::sendAtClient(std::string j_string){
     shared_from_this()->deliver(msg);
 
 }
+
 void HandleRequest::sendAllClient(std::string j_string, const int &id) {
     std::size_t len = j_string.size();
     message msg;
@@ -112,6 +115,7 @@ void HandleRequest::do_write()
         }
     });
 }
+
 std::string HandleRequest::handleRequestType(const json &js, const std::string &type_request, int partecipantId) {
     if (type_request == "request_login") {
         //prendi username e psw
@@ -120,17 +124,31 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         password = js.at("password").get<std::string>();
         QString colorParticiapant = "#00ffffff";
         std::string resDB = manDB.handleLogin(username, password, colorParticiapant);
-        std::list<std::string> risultato;
+        //al log in voglio avere lista di tutti i file nel db con relativo autore
+        std::multimap<std::string, std::string> risultato;
+        //std::list<std::string> risultato;
+        std::list<std::string> fileWithUser;
         if (resDB == "LOGIN_SUCCESS") {
             shared_from_this()->setUsername(username);
             shared_from_this()->setColor(colorParticiapant.toStdString());
             //recupero tutti i file dell'utente
             risultato = manDB.takeFiles(username);
+            std::string string;
+            std::string underscore = "_";
+            for(auto p : risultato){
+                string = p.first + underscore + p.second;
+                fileWithUser.push_back(string);
+                std::cout << p.first << ": " << p.second << "\n";
+            }
+            fileWithUser.sort();
+        }
+        for(auto p : risultato){
+            std::cout <<"\n\n" << p.first << ": " << p.second << "\n";
         }
         json j = json{{"response",  resDB},
                       {"username",  username},
                       {"colorUser", colorParticiapant.toStdString()},
-                      {"files",     risultato}};
+                      {"files",     fileWithUser}};
         std::string j_string = j.dump();
         return j_string;
     } else if (type_request == "request_signup") {
@@ -171,6 +189,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         json j = json{{"response", "insert_res"},
                       {"corpo",    corpo}};
         std::string j_string = j.dump();
+
         return j_string;
 
     } else if (type_request == "remove") {
@@ -251,16 +270,34 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             std::string j_string = j.dump();
             return j_string;
         }
+    } else if(type_request == "request_new_name"){
+        //vado a cambiare nome file nel DB
+        //bisognerebbe anche gestire la concorrenza, altri utenti potrebbero aver il file
+        //già aperto, in questo caso o non è possibile cambiare il nome oppure bisogna notificarlo
+        //a tutti gli utenti in quel momento attivi
+        std::string resDB = manDB.handleRenameFile(js.at("username").get<std::string>(),
+                                                   js.at("oldName").get<std::string>(),
+                                                   js.at("newName").get<std::string>());
+        if (resDB == "FILE_RENAME_SUCCESS") {
+            std::cout << "\nfile rinominato correttamente\n";
+
+            json j = json{{"response", "file_renamed"},
+                          {"newName",js.at("newName").get<std::string>()},
+                          {"oldName",js.at("oldName").get<std::string>()}};
+            std::string j_string = j.dump();
+            return j_string;
+        } else {
+            json j = json{{"response", "errore_rinomina_file"}};
+            std::string j_string = j.dump();
+            return j_string;
+        }
 
 
-
-
-    }   else {
-        std::cout << "nessun match col tipo di richiesta";
-        json j = json{{"response","general_error"}};
-        std::string j_string = j.dump();
-        return j_string;
-        //return type_request;
+    }  else {
+          std::cout << "nessun match col tipo di richiesta";
+          json j = json{{"response","general_error"}};
+          std::string j_string = j.dump();
+          return j_string;
     }
 }
 void HandleRequest::deliver(const message& msg)

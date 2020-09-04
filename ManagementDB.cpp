@@ -45,6 +45,7 @@ std::string ManagementDB::handleLogin(const std::string user,const std::string p
         return "CONNESSION_ERROR";
     }
 }
+
 std::string ManagementDB::handleSignup(const std::string e,const std::string username,const std::string psw){
     QSqlDatabase db  = connect();
     //TO DO, check per il controllo della mail
@@ -88,6 +89,7 @@ std::string ManagementDB::handleSignup(const std::string e,const std::string use
     }
 
 }
+
 std::string ManagementDB::checkMail(const QString mail){
     QRegExp mailREX(R"(\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}\b)");
     mailREX.setCaseSensitivity(Qt::CaseInsensitive);
@@ -120,6 +122,7 @@ std::string ManagementDB::handleOpenFile(const std::string user, const std::stri
     }else
         return "CONNESSION_ERROR_";
 }
+
 std::string ManagementDB::handleNewFile(const std::string user, const std::string file) {
     QSqlDatabase db  = connect();
 
@@ -141,25 +144,58 @@ std::string ManagementDB::handleNewFile(const std::string user, const std::strin
         return "CONNESSION_ERROR_";
 }
 
-std::list<std::string> ManagementDB::takeFiles(const std::string user) {
+/*std::list<std::string>*/
+std::multimap<std::string, std::string> ManagementDB::takeFiles(const std::string user) {
     QSqlDatabase db  = connect();
     if(db.open()){
         std::cout << "\n entrato nel db \n";
         QSqlQuery query;
         QString id = QString::fromUtf8(user.data(),user.size());
-        query.prepare("SELECT titolo FROM files WHERE username = '"+id+"'");
+        //query.prepare("SELECT titolo FROM files WHERE username = '"+id+"'");
+        query.prepare("SELECT username, titolo FROM files");
         if(query.exec()){
-            std::list<std::string> files;
+            //std::list<std::string> files;
+            std::multimap<std::string, std::string> files;
             while(query.next()){
-                QString title = query.value(0).toString();
+                //QString title = query.value(0).toString();
+                QString username = query.value(0).toString();
+                QString title = query.value(1).toString();
+                std::string utente = username.toStdString();
                 std::string titolo = title.toStdString();
-                std::cout <<"\n " << titolo << "\n";
-                files.push_back(titolo);
 
+                std::cout <<"\n " << titolo << "\n";
+                files.insert({utente,titolo});
+                //files.push_back(titolo);
             }
+
             return files;
         }
 
     }
-    return std::list<std::string>();
+    return std::multimap<std::string, std::string>();
+    //return std::list<std::string>();
+}
+
+std::string ManagementDB::handleRenameFile(const std::string user, const std::string oldName, const std::string newName) {
+    QSqlDatabase db = connect();
+
+    if (db.open()) {
+        QSqlQuery query;
+        QString id = QString::fromUtf8(user.data(), user.size());
+        QString vecchio = QString::fromUtf8(oldName.data(), oldName.size());
+        QString nuovo = QString::fromUtf8(newName.data(), newName.size());
+        query.prepare("UPDATE files SET titolo = '"+nuovo+"' WHERE username ='"+id+"' and titolo = '"+vecchio+"'");
+        if (query.exec()) {
+            //la query dovrebbe ritornare il file
+
+            db.close();
+            return "FILE_RENAME_SUCCESS";
+        } else {
+            db.close();
+            std::cout << "\n rinomina fallita\n";
+            return "FILE_OPEN_FAILED";
+        }
+
+    }else
+        return "CONNESSION_ERROR_";
 }

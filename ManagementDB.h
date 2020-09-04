@@ -22,8 +22,9 @@ public:
     std::string handleLogin(const std::string user, const std::string password, QString& color);
     std::string handleSignup(const std::string email,const std::string user,const std::string password);
     std::string handleNewFile(const std::string user, const std::string file );
-    std::list<std::string> takeFiles(const std::string user);
+    std::multimap<std::string,std::string> takeFiles(const std::string user);
     std::string handleOpenFile(const std::string user, const std::string file);
+    std::string handleRenameFile(const std::string user, const std::string oldName, const std::string newName);
 
 };
 
