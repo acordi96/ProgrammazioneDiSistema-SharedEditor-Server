@@ -42,9 +42,9 @@ MessageSymbol Participant::localInsert(int index, char c) {
 
     _symbol.insert(_symbol.begin()+index, s);
 
-    for (auto it = begin (_symbol); it != end (_symbol); ++it) {
+    /*for (auto it = begin (_symbol); it != end (_symbol); ++it) {
         std::cout<< it->getCharacter();
-    }
+    }*/
 
     MessageSymbol m(0, getId(), s, index);
     return m;

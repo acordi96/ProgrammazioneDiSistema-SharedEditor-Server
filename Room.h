@@ -26,6 +26,8 @@ public:
     void send(const MessageSymbol& m);
     void dispatchMessages();
 
+    //TODO: struttura per tenere i file aperti (non funge)
+    //std::map<std::string, std::ofstream *> files;
     const std::map<std::string, std::vector<Symbol>> &getRoomMap() const;
 
     void setRoomMap(const std::map<std::string, std::vector<Symbol>> &roomMap);
