@@ -29,9 +29,18 @@ void Room::deliverToAll(const message &msg, const int &partecipantId) {
     while (recent_msgs_.size() > max_recent_msgs)
         recent_msgs_.pop_front();
 
+    //TODO: ricerca nella room da ottimizzare splittando room
+    std::string onFile;
+    for(const auto& p: participants_) {
+        if(p->getId() == partecipantId) {
+            onFile = p->getCurrentFile();
+            break;
+        }
+    }
     for(const auto& p: participants_){
-        if(p->getId()!=partecipantId)
+        if(p->getId()!=partecipantId && p->getCurrentFile() == onFile) {
             p->deliver(msg);
+        }
     }
 }
 
