@@ -23,6 +23,7 @@ private:
     void connection();
 public:
     Server(boost::asio::io_context& io_context, const tcp::endpoint& endpoint);
+    static std::string getTime();
 };
 
 

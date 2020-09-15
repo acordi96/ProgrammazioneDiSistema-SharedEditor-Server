@@ -16,6 +16,7 @@ class ManagementDB {
 private:
     QSqlDatabase connect();
     std::string response;
+    QSqlDatabase database;
     std::string checkMail(const QString mail);
     QString generateRandomColor();
 public:
@@ -25,7 +26,6 @@ public:
     std::multimap<std::string,std::string> takeFiles(const std::string user);
     std::string handleOpenFile(const std::string user, const std::string file);
     std::string handleRenameFile(const std::string user, const std::string oldName, const std::string newName);
-
 };
 
 

@@ -12,6 +12,8 @@
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "InfiniteRecursion"
 
+#define maxBuffer 3000
+
 HandleRequest::HandleRequest(tcp::socket socket, Room &room) : socket(std::move(socket)), room_(room) {
 
 }
@@ -41,13 +43,19 @@ void HandleRequest::do_read_body() {
     boost::asio::async_read(socket, boost::asio::buffer(read_msg_.body(), read_msg_.body_length()),
                             [this, self](boost::system::error_code ec, std::size_t /*length*/) {
                                 if (!ec) {
-                                    std::cout << "Richiesta arrivata dal client: " << read_msg_.body() << std::endl;
+                                    std::cout << Server::getTime() << "REQUEST from client " << this->getId() - 1
+                                              << " (" << this->getUsername() << "): " << read_msg_.body() << std::endl;
                                     json messageFromClient;
                                     try {
-                                        messageFromClient = json::parse(read_msg_.body());
-                                    } catch (QUnhandledException e) {
-                                        std::cout<<"Json parce exception, ignoring request"<<std::endl;
+                                        std::string readBody = read_msg_.body();
+                                        readBody.erase(readBody.find('}') + 1);
+                                        messageFromClient = json::parse(readBody);
+                                    } catch (...) {
+                                        std::cout << "Json parse exception, ignoring request: " << read_msg_.body()
+                                                  << std::endl;
+                                        sendAtClient(json{{"response", "json_parse_error"}}.dump());
                                         do_read_header();
+                                        return;
                                     }
                                     std::string requestType = messageFromClient.at("operation").get<std::string>();
                                     int partecipantId = shared_from_this()->getId();
@@ -59,11 +67,10 @@ void HandleRequest::do_read_body() {
                                     } else if (requestType == "remove") {
                                         sendAllClient(response, partecipantId);
                                     } else if (requestType == "request_login" || requestType == "request_signup" ||
-                                               requestType == "request_new_file" || requestType == "open_file") {
+                                               requestType == "request_new_file") {
                                         sendAtClient(response);
                                     }
-
-
+                                    //l'apertura file viene spedita direttamente man mano che legge per ottimizzare
                                     do_read_header();
                                 } else {
                                     room_.leave(shared_from_this());
@@ -78,7 +85,8 @@ void HandleRequest::sendAtClient(std::string j_string) {
     std::memcpy(msg.body(), j_string.data(), msg.body_length());
     msg.body()[msg.body_length()] = '\0';
     msg.encode_header();
-    std::cout << "Risposta al client: " << msg.body() << std::endl;
+    std::cout << Server::getTime() << "RESPONSE to client  " << this->getId() - 1 << " (" << this->getUsername()
+              << "): " << msg.body() << std::endl;
     shared_from_this()->deliver(msg);
 
 }
@@ -90,7 +98,8 @@ void HandleRequest::sendAllClient(std::string j_string, const int &id) {
     std::memcpy(msg.body(), j_string.data(), msg.body_length());
     msg.body()[msg.body_length()] = '\0';
     msg.encode_header();
-    std::cout << "Risposta indirizzata a tutti i client: " << msg.body() << std::endl;
+    std::cout << Server::getTime() << "WRITE to all clients on FILE " << this->getCurrentFile() << ": " << msg.body()
+              << std::endl;
     room_.deliverToAll(msg, id);
 }
 
@@ -131,15 +140,11 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             risultato = manDB.takeFiles(username);
             std::string string;
             std::string underscore = "_";
-            for(auto p : risultato){
+            for (auto p : risultato) {
                 string = p.first + underscore + p.second;
                 fileWithUser.push_back(string);
-                std::cout << p.first << ": " << p.second << std::endl;
             }
             fileWithUser.sort();
-        }
-        for(auto p : risultato){
-            std::cout <<"\n\n" << p.first << ": " << p.second << "\n";
         }
         json j = json{{"response",  resDB},
                       {"username",  username},
@@ -151,7 +156,6 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         //prendi username e psw
         std::string username, email, password;
         username = js.at("username").get<std::string>();
-        std::cout << "\n username ricevuto per la registrazione: " + username;
         password = js.at("password").get<std::string>();
         email = js.at("email").get<std::string>();
         QString colorParticiapant = "#00ffffff";
@@ -159,7 +163,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
         //se la registrazione va bene, creo la cartella personale per il nuovo utente
         if (resDB == "SIGNUP_SUCCESS") {
-            std::cout << "Creata cartella personale"<<std::endl;
+            std::cout << Server::getTime() << "SIGNUP SUCCESS client " << this->getId() << ": " << username
+                      << std::endl;
             std::string path = boost::filesystem::current_path().string();
             path = path.substr(0, path.find_last_of("/")); //esce da cartella cmake
             path += "/files/" + js.at("username").get<std::string>();
@@ -192,7 +197,6 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         file.seekp(message.first);
         file << message.second;
         file.close();
-        std::cout << "Carattere '" << message.second << "' salvato in posizione " << message.first << std::endl;
         //TODO: STRUTTURA DATI CONDIVISA NON FUNZIONA
         /*if(this->room_.files.at(currentFile)->is_open()) {
             std::cout<<"TENTO DI SCRIVERE"<<std::endl;
@@ -223,24 +227,23 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         char c;
         std::string text;
         file.seekg(0);
-        for(int i = 0; i < startIndex; i++) {
+        for (int i = 0; i < startIndex; i++) {
             file.get(c);
             text += c;
         }
         file.seekg(endIndex);
-        while(file.get(c)) {
-            if(c == EOF)
+        while (file.get(c)) {
+            if (c == EOF)
                 break;
             text += c;
         }
         file.close();
         std::ofstream fileRiscritto;
         fileRiscritto.open(currentFile);
-        fileRiscritto<<text;
+        fileRiscritto << text;
         fileRiscritto.close();
         return j_string;
     } else if (type_request == "request_new_file") {
-        std::cout << "Richiesto nuovo file\n";
 
         std::string path = boost::filesystem::current_path().string();
         path = path.substr(0, path.find_last_of("/")); //esce da cartella cmake
@@ -268,7 +271,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         std::string resDB = manDB.handleNewFile(js.at("username").get<std::string>(),
                                                 js.at("name").get<std::string>());
         if (resDB == "FILE_INSERT_SUCCESS") {
-            std::cout << "File inserito nel db correttamente"<<std::endl;
+            std::cout << Server::getTime() << "NEW FILE CREATED for client " << this->getId() << " ("
+                      << this->getUsername() << "): " << nomeFile << std::endl;
 
             // settare il current file
             this->setCurrentFile(nomeFile);
@@ -282,38 +286,63 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             return j_string;
         }
     } else if (type_request == "open_file") {
-        std::string path = boost::filesystem::current_path().string();
-        path = path.substr(0, path.find_last_of("/")); //esce da cartella cmake
-        path += "/files/" + js.at("username").get<std::string>();
-        std::cout<<"json: "<<js.dump()<<std::endl;
-        std::string nomeFile = path + "/" + js.at("name").get<std::string>() + ".txt";
 
-        //TODO: il database e' abbastanza inutile
-        /*std::string resDB = manDB.handleOpenFile(js.at("username").get<std::string>(),
+        std::string resDB = manDB.handleOpenFile(js.at("username").get<std::string>(),
                                                  js.at("name").get<std::string>());
-        if (resDB == "FILE_OPEN_SUCCESS") { */
-            std::cout << "Apertura file "<<nomeFile << std::endl;
-            this->setCurrentFile(nomeFile);
-            std::fstream file;
+        if (resDB == "FILE_OPEN_SUCCESS") {
+            std::string path = boost::filesystem::current_path().string();
+            path = path.substr(0, path.find_last_of("/")); //esce da cartella cmake
+            path += "/files/" + js.at("username").get<std::string>();
+            std::string nomeFile = path + "/" + js.at("name").get<std::string>() + ".txt";
+            std::ifstream file;
             file.open(nomeFile);
-            std::stringstream openedFileToWrite;
-            openedFileToWrite << file.rdbuf();
-            file.close();
-            for(int i = 0; i < openedFileToWrite.str().length(); i++) {
-                MessageSymbol messS = localInsert(openedFileToWrite.str()[i], i);
+            std::ifstream in(nomeFile, std::ifstream::ate | std::ifstream::binary);
+            int dim = in.tellg();
+            std::cout << Server::getTime() << "OPEN FILE (" << dim << " char) for client " << this->getId() - 1 << " ("
+                      << this->getUsername() << "): " << nomeFile << std::endl;
+            this->setCurrentFile(nomeFile);
+            char toWrite[maxBuffer + 1];
+            int of = dim / maxBuffer;
+            int i = 0;
+            while ((i + 1) * maxBuffer < dim) {
+                file.read(toWrite, maxBuffer);
+                std::string toWriteString = toWrite;
+                toWriteString.erase(maxBuffer);
+                json j = json{{"response",      "open_file"},
+                              {"maxBuffer", maxBuffer},
+                              {"partToWrite",   i},
+                              {"ofPartToWrite", of},
+                              {"toWrite",       toWriteString}};
+                for (int k = 0; k < toWriteString.length(); k++) {
+                    MessageSymbol messS = localInsert(toWriteString[k], k);
+                    room_.send(messS);
+                    room_.dispatchMessages();
+                }
+                sendAtClient(j.dump());
+                i++;
+            }
+            char toWrite2[(dim % maxBuffer) + 1];
+            file.read(toWrite2, dim % maxBuffer);
+            std::string toWriteString = toWrite2;
+            toWriteString.erase((dim % maxBuffer));
+            json j = json{{"response",      "open_file"},
+                          {"maxBuffer", maxBuffer},
+                          {"partToWrite",   of},
+                          {"ofPartToWrite", of},
+                          {"toWrite",       toWriteString}};
+            for (int k = 0; k < toWriteString.length(); k++) {
+                MessageSymbol messS = localInsert(toWriteString[k], k);
                 room_.send(messS);
                 room_.dispatchMessages();
             }
-            json j = json{{"response", "file_opened"},
-                          {"toWrite",  openedFileToWrite.str()}};
-            std::string j_string = j.dump();
-            return j_string;
-        /*} else {
+            sendAtClient(j.dump());
+            return "";
+        } else {
             json j = json{{"response", "errore_apertura_file"}};
             std::string j_string = j.dump();
             return j_string;
-        }*/
-    } else if(type_request == "request_new_name"){
+        }
+    } else if (type_request == "request_new_name") {
         //vado a cambiare nome file nel DB
         //bisognerebbe anche gestire la concorrenza, altri utenti potrebbero aver il file
         //già aperto, in questo caso o non è possibile cambiare il nome oppure bisogna notificarlo
@@ -322,11 +351,11 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                                                    js.at("oldName").get<std::string>(),
                                                    js.at("newName").get<std::string>());
         if (resDB == "FILE_RENAME_SUCCESS") {
-            std::cout << "File rinominato correttamente"<<std::endl;
+            std::cout << "File rinominato correttamente" << std::endl;
 
             json j = json{{"response", "file_renamed"},
-                          {"newName",js.at("newName").get<std::string>()},
-                          {"oldName",js.at("oldName").get<std::string>()}};
+                          {"newName",  js.at("newName").get<std::string>()},
+                          {"oldName",  js.at("oldName").get<std::string>()}};
             std::string j_string = j.dump();
             return j_string;
         } else {
@@ -336,11 +365,11 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         }
 
 
-    }  else {
-          std::cout << "nessun match col tipo di richiesta"<<std::endl;
-          json j = json{{"response","general_error"}};
-          std::string j_string = j.dump();
-          return j_string;
+    } else {
+        std::cout << "nessun match col tipo di richiesta" << std::endl;
+        json j = json{{"response", "general_error"}};
+        std::string j_string = j.dump();
+        return j_string;
     }
 }
 
