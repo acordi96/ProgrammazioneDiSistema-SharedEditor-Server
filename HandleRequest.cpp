@@ -47,12 +47,13 @@ void HandleRequest::do_read_body() {
                                               << " (" << this->getUsername() << "): " << read_msg_.body() << std::endl;
                                     json messageFromClient;
                                     try {
-                                        std::string readBody = read_msg_.body();
-                                        readBody.erase(readBody.find('}') + 1);
-                                        messageFromClient = json::parse(readBody);
+                                        messageFromClient = json::parse(read_msg_.body());
                                     } catch (...) {
                                         std::cout << "Json parse exception, ignoring request: " << read_msg_.body()
                                                   << std::endl;
+                                        std::string readBody = read_msg_.body();
+                                        readBody.erase(readBody.find('}') + 1);
+                                        messageFromClient = json::parse(readBody);
                                         sendAtClient(json{{"response", "json_parse_error"}}.dump());
                                         do_read_header();
                                         return;
@@ -60,8 +61,15 @@ void HandleRequest::do_read_body() {
                                     std::string requestType = messageFromClient.at("operation").get<std::string>();
                                     int partecipantId = shared_from_this()->getId();
                                     //nella gestione devo tenere traccia del partecipante che invia la richiesta, quindi a chi devo rispondere e a chi no
-                                    std::string response = handleRequestType(messageFromClient, requestType,
-                                                                             partecipantId);
+                                    std::string response;
+                                    try {
+                                        response = handleRequestType(messageFromClient, requestType,
+                                                                                 partecipantId);
+                                    } catch (...) {
+                                        std::cout<<"error handleRequestType "<<requestType<<" ignoring request"<<std::endl;
+                                        do_read_header();
+                                    }
+
                                     if (requestType == "insert") {
                                         sendAllClient(response, partecipantId);
                                     } else if (requestType == "remove") {
@@ -314,7 +322,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                               {"ofPartToWrite", of},
                               {"toWrite",       toWriteString}};
                 for (int k = 0; k < toWriteString.length(); k++) {
-                    MessageSymbol messS = localInsert(toWriteString[k], k);
+                    MessageSymbol messS = localInsert(k, toWriteString[k]);
                     room_.send(messS);
                     room_.dispatchMessages();
                 }
@@ -331,12 +339,12 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                           {"ofPartToWrite", of},
                           {"toWrite",       toWriteString}};
             for (int k = 0; k < toWriteString.length(); k++) {
-                MessageSymbol messS = localInsert(toWriteString[k], k);
+                MessageSymbol messS = localInsert(k, toWriteString[k]);
                 room_.send(messS);
                 room_.dispatchMessages();
             }
             sendAtClient(j.dump());
-            return "";
+            return j.dump();
         } else {
             json j = json{{"response", "errore_apertura_file"}};
             std::string j_string = j.dump();
