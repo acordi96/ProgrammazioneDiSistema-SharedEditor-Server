@@ -34,10 +34,9 @@ private:
     //metodi
     void do_read_header();
     void do_read_body();
-    std::string handleRequestType(const json& json, const std::string& type_request, int partecipantId);
-    void sendAtClient(std::string response);
-    void sendAllClient(std::string responde, const int &id);
-    std::string generateRandomString(int length);
+    std::string handleRequestType(const json &js, const std::string &type_request);
+    void sendAtClient(const std::string& response);
+    void sendAllClient(const std::string& responde, const int &id);
 public:
     void start(int paticipantId);
     void do_write();

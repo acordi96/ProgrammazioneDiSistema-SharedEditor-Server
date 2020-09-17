@@ -31,9 +31,18 @@ public:
     const std::map<std::string, std::vector<Symbol>> &getRoomMap() const;
 
     void setRoomMap(const std::map<std::string, std::vector<Symbol>> &roomMap);
-
-private:
     std::set<participant_ptr> participants_;
+
+    std::map<std::string, Room*> roomPerFile;
+
+    //presi da participant
+    int count = 0;
+    std::vector<Symbol> _symbol; //TODO: uno per user????
+    std::vector<int> generatePos(int index, char c);
+    int comparePos(std::vector<int> currVetPos, std::vector<int> newVetPos, int index);
+    MessageSymbol localInsert(int index, char c, int id);
+    MessageSymbol localErase(int startIndex,int endIndex, int id);
+private:
     enum { max_recent_msgs = 100 };
     message_queue recent_msgs_;
     msgInfo_queue infoMsgs_;

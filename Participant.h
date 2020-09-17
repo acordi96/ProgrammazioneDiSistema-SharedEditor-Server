@@ -10,13 +10,12 @@
 class Participant {
 private:
     int _siteId;
-    int count = 0;
     std::string currentFile;
     std::string username;
     std::string color;
-    std::vector<Symbol> _symbol;
+    /*std::vector<Symbol> _symbol; //TODO: uno per user????
     std::vector<int> generatePos(int index, char c);
-    int comparePos(std::vector<int> currVetPos, std::vector<int> newVetPos, int index);
+    int comparePos(std::vector<int> currVetPos, std::vector<int> newVetPos, int index);*/
 public:
     virtual ~Participant() {}
     virtual void deliver(const message& msg) = 0;
@@ -36,8 +35,8 @@ public:
     int getId() const;
     const std::string &getCurrentFile() const;
     //metodi per la concorrenza
-    MessageSymbol localInsert(int index, char c);
-    MessageSymbol localErase(int startIndex,int endIndex);
+    /*MessageSymbol localInsert(int index, char c);
+    MessageSymbol localErase(int startIndex,int endIndex);*/
     void process(const MessageSymbol &m);
 };
 

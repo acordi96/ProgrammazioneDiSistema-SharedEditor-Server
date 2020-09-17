@@ -4,6 +4,8 @@
 
 #include "Server.h"
 
+#include <utility>
+
 Server::Server(boost::asio::io_context &io_context, const tcp::endpoint &endpoint) : acceptor_(io_context, endpoint) {
     connection();
 }
@@ -29,3 +31,17 @@ std::string Server::getTime() {
     std::string time = std::ctime(&now);
     return "[" + time.erase(time.length() - 1) + "] - ";
 }
+/*
+std::map<std::string, Room *> Server::getRoomsOfFile() {
+    return roomsOfFile;
+}
+
+void Server::insertParticipantIntoRoomsOfFile(const std::string& file, participant_ptr newParticipant) {
+    roomsOfFile.find(file)->second->join(std::move(newParticipant));
+}
+
+void Server::createRoomsOfFile(std::string file, participant_ptr newParticipant) {
+    Room newRoom;
+    newRoom.join(std::move(newParticipant));
+    roomsOfFile.insert(std::pair<std::string, Room*>(file, &newRoom));
+}*/

@@ -21,9 +21,13 @@ private:
     Room room;
     tcp::acceptor acceptor_;
     void connection();
+    static std::map<std::string, Room*> roomsOfFile;
 public:
     Server(boost::asio::io_context& io_context, const tcp::endpoint& endpoint);
     static std::string getTime();
+   /* static std::map<std::string, Room*> getRoomsOfFile();
+    static void insertParticipantIntoRoomsOfFile(const std::string&, participant_ptr);
+    static void createRoomsOfFile(std::string, participant_ptr);*/
 };
 
 

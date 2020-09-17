@@ -21,7 +21,7 @@ HandleRequest::HandleRequest(tcp::socket socket, Room &room) : socket(std::move(
 void HandleRequest::start(int participantId) {
     //dai un id al partecipante
     shared_from_this()->setSiteId(participantId);
-    room_.join(shared_from_this());
+    room_.join(shared_from_this()); //general room
     do_read_header();
 }
 
@@ -58,14 +58,13 @@ void HandleRequest::do_read_body() {
                                         return;
                                     }
                                     std::string requestType = messageFromClient.at("operation").get<std::string>();
-                                    int partecipantId = shared_from_this()->getId();
+                                    int participantId = shared_from_this()->getId();
                                     //nella gestione devo tenere traccia del partecipante che invia la richiesta, quindi a chi devo rispondere e a chi no
-                                    std::string response = handleRequestType(messageFromClient, requestType,
-                                                                             partecipantId);
+                                    std::string response = handleRequestType(messageFromClient, requestType);
                                     if (requestType == "insert") {
-                                        sendAllClient(response, partecipantId);
+                                        sendAllClient(response, participantId);
                                     } else if (requestType == "remove") {
-                                        sendAllClient(response, partecipantId);
+                                        sendAllClient(response, participantId);
                                     } else if (requestType == "request_login" || requestType == "request_signup" ||
                                                requestType == "request_new_file") {
                                         sendAtClient(response);
@@ -78,7 +77,7 @@ void HandleRequest::do_read_body() {
                             });
 }
 
-void HandleRequest::sendAtClient(std::string j_string) {
+void HandleRequest::sendAtClient(const std::string& j_string) {
     std::size_t len = j_string.size();
     message msg;
     msg.body_length(len);
@@ -91,7 +90,7 @@ void HandleRequest::sendAtClient(std::string j_string) {
 
 }
 
-void HandleRequest::sendAllClient(std::string j_string, const int &id) {
+void HandleRequest::sendAllClient(const std::string& j_string, const int &id) {
     std::size_t len = j_string.size();
     message msg;
     msg.body_length(len);
@@ -100,7 +99,7 @@ void HandleRequest::sendAllClient(std::string j_string, const int &id) {
     msg.encode_header();
     std::cout << Server::getTime() << "WRITE to all clients on FILE " << this->getCurrentFile() << ": " << msg.body()
               << std::endl;
-    room_.deliverToAll(msg, id);
+    room_.roomPerFile.find(this->getCurrentFile())->second->deliverToAll(msg, id);
 }
 
 void HandleRequest::do_write() {
@@ -121,7 +120,7 @@ void HandleRequest::do_write() {
                              });
 }
 
-std::string HandleRequest::handleRequestType(const json &js, const std::string &type_request, int partecipantId) {
+std::string HandleRequest::handleRequestType(const json &js, const std::string &type_request) {
     if (type_request == "request_login") {
         //prendi username e psw
         std::string username, password;
@@ -140,7 +139,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             risultato = manDB.takeFiles(username);
             std::string string;
             std::string underscore = "_";
-            for (auto p : risultato) {
+            for (const auto& p : risultato) {
                 string = p.first + underscore + p.second;
                 fileWithUser.push_back(string);
             }
@@ -166,7 +165,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             std::cout << Server::getTime() << "SIGNUP SUCCESS client " << this->getId() << ": " << username
                       << std::endl;
             std::string path = boost::filesystem::current_path().string();
-            path = path.substr(0, path.find_last_of("/")); //esce da cartella cmake
+            path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
             path += "/files/" + js.at("username").get<std::string>();
             boost::filesystem::create_directory(path);
             shared_from_this()->setUsername(username); //TODO: cos'e'??
@@ -183,9 +182,9 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         return j_string;
     } else if (type_request == "insert") {
         std::pair<int, char> message = js.at("corpo").get<std::pair<int, char>>();
-        MessageSymbol messS = localInsert(message.first, message.second);
-        room_.send(messS);
-        room_.dispatchMessages();
+        MessageSymbol messS = room_.roomPerFile.find(this->getCurrentFile())->second->localInsert(message.first, message.second, this->getId());
+        room_.roomPerFile.find(this->getCurrentFile())->second->send(messS);
+        //room_.roomPerFile.find(this->getCurrentFile())->second->dispatchMessages();
         std::pair<int, char> corpo(messS.getNewIndex(), message.second);
         json j = json{{"response", "insert_res"},
                       {"corpo",    corpo}};
@@ -212,9 +211,10 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
     } else if (type_request == "remove") {
         int startIndex = js.at("start").get<int>();
         int endIndex = js.at("end").get<int>();
-        MessageSymbol messS = localErase(startIndex, endIndex);
-        room_.send(messS);
-        room_.dispatchMessages();
+        MessageSymbol messS = room_.roomPerFile.find(this->getCurrentFile())->second->roomPerFile.find(
+                this->getCurrentFile())->second->localErase(startIndex, endIndex, this->getId());
+        room_.roomPerFile.find(this->getCurrentFile())->second->send(messS);
+        //room_.roomPerFile.find(this->getCurrentFile())->second->dispatchMessages();
         json j = json{{"response", "remove_res"},
                       {"start",    startIndex},
                       {"end",      endIndex}};
@@ -246,7 +246,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
     } else if (type_request == "request_new_file") {
 
         std::string path = boost::filesystem::current_path().string();
-        path = path.substr(0, path.find_last_of("/")); //esce da cartella cmake
+        path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
         path += "/files/" + js.at("username").get<std::string>();
         boost::filesystem::path personalDir(path);
         if (!boost::filesystem::exists(personalDir)) { //anche se gia' fatto in signup
@@ -291,9 +291,20 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                                                  js.at("name").get<std::string>());
         if (resDB == "FILE_OPEN_SUCCESS") {
             std::string path = boost::filesystem::current_path().string();
-            path = path.substr(0, path.find_last_of("/")); //esce da cartella cmake
+            path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
             path += "/files/" + js.at("username").get<std::string>();
             std::string nomeFile = path + "/" + js.at("name").get<std::string>() + ".txt";
+            bool firstOpen;
+            shared_from_this()->setSiteId(this->getId());
+            if (room_.roomPerFile.find(nomeFile) != room_.roomPerFile.end()) {
+                room_.roomPerFile.find(nomeFile)->second->participants_.insert(shared_from_this());//->join(shared_from_this());
+                firstOpen = false;
+            } else {
+                Room newRoom{};
+                newRoom.participants_.insert(shared_from_this());//.join(shared_from_this());
+                room_.roomPerFile.insert(std::pair<std::string, Room *>(nomeFile, &newRoom));
+                firstOpen = true;
+            }
             std::ifstream file;
             file.open(nomeFile);
             std::ifstream in(nomeFile, std::ifstream::ate | std::ifstream::binary);
@@ -313,11 +324,14 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                               {"partToWrite",   i},
                               {"ofPartToWrite", of},
                               {"toWrite",       toWriteString}};
-                for (int k = 0; k < toWriteString.length(); k++) {
-                    MessageSymbol messS = localInsert(toWriteString[k], k);
-                    room_.send(messS);
-                    room_.dispatchMessages();
+                if (firstOpen) {
+                    for (int k = 0; k < toWriteString.length(); k++) {
+                        MessageSymbol messS = room_.roomPerFile.find(this->getCurrentFile())->second->localInsert(k, toWriteString[k], this->getId());
+                        //room_.roomPerFile.find(this->getCurrentFile())->second->send(messS);
+                        //room_.roomPerFile.find(this->getCurrentFile())->second->dispatchMessages();
+                    }
                 }
+
                 sendAtClient(j.dump());
                 i++;
             }
@@ -330,10 +344,12 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                           {"partToWrite",   of},
                           {"ofPartToWrite", of},
                           {"toWrite",       toWriteString}};
-            for (int k = 0; k < toWriteString.length(); k++) {
-                MessageSymbol messS = localInsert(toWriteString[k], k);
-                room_.send(messS);
-                room_.dispatchMessages();
+            if (firstOpen) {
+                for (int k = 0; k < toWriteString.length(); k++) {
+                    MessageSymbol messS = room_.roomPerFile.find(this->getCurrentFile())->second->localInsert(k, toWriteString[k], this->getId());
+                    //room_.roomPerFile.find(this->getCurrentFile())->second->send(messS);
+                    //room_.roomPerFile.find(this->getCurrentFile())->second->dispatchMessages();
+                }
             }
             sendAtClient(j.dump());
             return "";
@@ -380,22 +396,4 @@ void HandleRequest::deliver(const message &msg) {
     if (!write_in_progress) {
         do_write();
     }
-}
-
-std::string HandleRequest::generateRandomString(int length) {
-    std::string chars(
-            "abcdefghijklmnopqrstuvwxyz"
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-            "1234567890"
-            "!@#$%^&*()"
-            "`~-_=+[{]{\\|;:'\",<.>/?");
-    std::string salt;
-    boost::random::random_device rng;
-    boost::random::uniform_int_distribution<> index_dist(0, chars.size() - 1);
-    for (int i = 0; i < length; ++i) {
-        salt.append(1, chars[index_dist(rng)]);
-    }
-    //std::cout << std::endl;
-    //return std::__cxx11::string();
-    return salt;
 }
