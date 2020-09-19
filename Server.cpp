@@ -18,7 +18,7 @@ void Server::connection() {
         } else {
             //LEGGO LA RICHIESTA E LA PROCESSO
             std::cout << Server::getTime() << "CONNECTED to new client: " << count << std::endl;
-            std::make_shared<HandleRequest>(std::move(socket), room)->start(++count);
+            std::make_shared<HandleRequest>(std::move(socket))->start(++count);
         }
         connection();
     });

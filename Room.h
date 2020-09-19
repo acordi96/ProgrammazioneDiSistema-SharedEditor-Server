@@ -19,6 +19,13 @@ typedef std::shared_ptr<Participant> participant_ptr;
 
 class Room {
 public:
+    static Room& getInstance() {
+        static Room instance;
+        return instance;
+    }
+    Room(Room const&) = delete;
+    void operator=(Room const&) = delete;
+
     void join(participant_ptr participant);
     void leave(participant_ptr participant);
     void deliver(const message& msg);
@@ -33,6 +40,7 @@ public:
     void setRoomMap(const std::map<std::string, std::vector<Symbol>> &roomMap);
 
 private:
+    Room() = default;
     std::set<participant_ptr> participants_;
     enum { max_recent_msgs = 100 };
     message_queue recent_msgs_;

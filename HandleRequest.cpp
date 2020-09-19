@@ -14,14 +14,14 @@
 
 #define maxBuffer 3000
 
-HandleRequest::HandleRequest(tcp::socket socket, Room &room) : socket(std::move(socket)), room_(room) {
+HandleRequest::HandleRequest(tcp::socket socket) : socket(std::move(socket)) {
 
 }
 
 void HandleRequest::start(int participantId) {
     //dai un id al partecipante
     shared_from_this()->setSiteId(participantId);
-    room_.join(shared_from_this());
+    Room::getInstance().join(shared_from_this());
     do_read_header();
 }
 
@@ -33,7 +33,7 @@ void HandleRequest::do_read_header() {
                                 if (!ec && read_msg_.decode_header()) {
                                     do_read_body();
                                 } else {
-                                    room_.leave(shared_from_this());
+                                    Room::getInstance().leave(shared_from_this());
                                 }
                             });
 }
@@ -81,7 +81,7 @@ void HandleRequest::do_read_body() {
                                     //l'apertura file viene spedita direttamente man mano che legge per ottimizzare
                                     do_read_header();
                                 } else {
-                                    room_.leave(shared_from_this());
+                                    Room::getInstance().leave(shared_from_this());
                                 }
                             });
 }
@@ -108,7 +108,7 @@ void HandleRequest::sendAllClient(std::string j_string, const int &id) {
     msg.encode_header();
     std::cout << Server::getTime() << "WRITE to all clients on FILE " << this->getCurrentFile() << ": " << msg.body()
               << std::endl;
-    room_.deliverToAll(msg, id);
+    Room::getInstance().deliverToAll(msg, id);
 }
 
 void HandleRequest::do_write() {
@@ -158,8 +158,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                       {"username",  username},
                       {"colorUser", colorParticiapant.toStdString()},
                       {"files",     fileWithUser}};
-        std::string j_string = j.dump();
-        return j_string;
+        return j.dump();
     } else if (type_request == "request_signup") {
         //prendi username e psw
         std::string username, email, password;
@@ -183,21 +182,18 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                       {"username",  username},
                       {"colorUser", colorParticiapant.toStdString()}};
         //json j = json{{"response", resDB}};
-        std::string j_string = j.dump();
-        return j_string;
+        return j.dump();
     } else if (type_request == "R_LOGOUT") {
         json j = json{{"response", "logout"}};
-        std::string j_string = j.dump();
-        return j_string;
+        return j.dump();
     } else if (type_request == "insert") {
         std::pair<int, char> message = js.at("corpo").get<std::pair<int, char>>();
         MessageSymbol messS = localInsert(message.first, message.second);
-        room_.send(messS);
-        room_.dispatchMessages();
+        Room::getInstance().send(messS);
+        Room::getInstance().dispatchMessages();
         std::pair<int, char> corpo(messS.getNewIndex(), message.second);
         json j = json{{"response", "insert_res"},
                       {"corpo",    corpo}};
-        std::string j_string = j.dump();
         //salvataggio su file
         std::string currentFile = this->getCurrentFile();
         std::fstream file;
@@ -215,18 +211,17 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             std::cout<<"errore, file non aperto"<<std::endl;
         }*/
 
-        return j_string;
+        return j.dump();
 
     } else if (type_request == "remove") {
         int startIndex = js.at("start").get<int>();
         int endIndex = js.at("end").get<int>();
         MessageSymbol messS = localErase(startIndex, endIndex);
-        room_.send(messS);
-        room_.dispatchMessages();
+        Room::getInstance().send(messS);
+        Room::getInstance().dispatchMessages();
         json j = json{{"response", "remove_res"},
                       {"start",    startIndex},
                       {"end",      endIndex}};
-        std::string j_string = j.dump();
         //salvataggio su file
         std::string currentFile = this->getCurrentFile();
         std::fstream file;
@@ -250,7 +245,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         fileRiscritto.open(currentFile);
         fileRiscritto << text;
         fileRiscritto.close();
-        return j_string;
+        return j.dump();
     } else if (type_request == "request_new_file") {
 
         std::string path = boost::filesystem::current_path().string();
@@ -267,8 +262,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         if (boost::filesystem::exists(nomeFile)) {
             std::cout << "File gia' esistente" << std::endl;
             json j = json{{"response", "new_file_already_exist"}};
-            std::string j_string = j.dump();
-            return j_string;
+            return j.dump();
         }
         std::ofstream newFile;
         newFile.open(nomeFile, std::ofstream::out);
@@ -286,18 +280,16 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             this->setCurrentFile(nomeFile);
 
             json j = json{{"response", "new_file_created"}};
-            std::string j_string = j.dump();
-            return j_string;
+            return j.dump();
         } else {
             json j = json{{"response", "errore_salvataggio_file_db"}};
-            std::string j_string = j.dump();
-            return j_string;
+            return j.dump();
         }
     } else if (type_request == "open_file") {
 
         std::string resDB = manDB.handleOpenFile(js.at("username").get<std::string>(),
                                                  js.at("name").get<std::string>());
-        if (resDB == "FILE_OPEN_SUCCESS") {
+        if (/*resDB == "FILE_OPEN_SUCCESS"*/ true) { //TODO: da problemi nella seconda apertura file
             std::string path = boost::filesystem::current_path().string();
             path = path.substr(0, path.find_last_of("/")); //esce da cartella cmake
             path += "/files/" + js.at("username").get<std::string>();
@@ -323,8 +315,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                               {"toWrite",       toWriteString}};
                 for (int k = 0; k < toWriteString.length(); k++) {
                     MessageSymbol messS = localInsert(k, toWriteString[k]);
-                    room_.send(messS);
-                    room_.dispatchMessages();
+                    Room::getInstance().send(messS);
+                    Room::getInstance().dispatchMessages();
                 }
                 sendAtClient(j.dump());
                 i++;
@@ -340,15 +332,14 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                           {"toWrite",       toWriteString}};
             for (int k = 0; k < toWriteString.length(); k++) {
                 MessageSymbol messS = localInsert(k, toWriteString[k]);
-                room_.send(messS);
-                room_.dispatchMessages();
+                Room::getInstance().send(messS);
+                Room::getInstance().dispatchMessages();
             }
             sendAtClient(j.dump());
             return j.dump();
         } else {
             json j = json{{"response", "errore_apertura_file"}};
-            std::string j_string = j.dump();
-            return j_string;
+            return j.dump();
         }
     } else if (type_request == "request_new_name") {
         //vado a cambiare nome file nel DB
@@ -364,20 +355,17 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             json j = json{{"response", "file_renamed"},
                           {"newName",  js.at("newName").get<std::string>()},
                           {"oldName",  js.at("oldName").get<std::string>()}};
-            std::string j_string = j.dump();
-            return j_string;
+            return j.dump();
         } else {
             json j = json{{"response", "errore_rinomina_file"}};
-            std::string j_string = j.dump();
-            return j_string;
+            return j.dump();
         }
 
 
     } else {
         std::cout << "nessun match col tipo di richiesta" << std::endl;
         json j = json{{"response", "general_error"}};
-        std::string j_string = j.dump();
-        return j_string;
+        return j.dump();
     }
 }
 

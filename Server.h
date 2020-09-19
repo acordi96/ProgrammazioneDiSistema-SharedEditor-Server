@@ -18,7 +18,6 @@ using boost::asio::ip::tcp;
 class Server {
 private:
     int count = 1;
-    Room room;
     tcp::acceptor acceptor_;
     void connection();
 public:

@@ -25,7 +25,6 @@ using json = nlohmann::json;
 class HandleRequest : public Participant, public std::enable_shared_from_this<HandleRequest>{
 private:
     //attributi per far funzionare tutto
-    Room& room_;
     tcp::socket socket;
     message read_msg_;
     message_queue write_msgs_;
@@ -41,7 +40,7 @@ private:
 public:
     void start(int paticipantId);
     void do_write();
-    explicit HandleRequest(tcp::socket socket, Room& room);
+    explicit HandleRequest(tcp::socket socket);
     void deliver(const message& msg);
 };
 
