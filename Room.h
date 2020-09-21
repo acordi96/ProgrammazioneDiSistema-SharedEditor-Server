@@ -19,26 +19,24 @@ typedef std::shared_ptr<Participant> participant_ptr;
 
 class Room {
 public:
-    static Room& getInstance() {
-        static Room instance;
-        return instance;
-    }
+    static Room& getInstance();
     Room(Room const&) = delete;
     void operator=(Room const&) = delete;
 
-    void join(participant_ptr participant);
-    void leave(participant_ptr participant);
+    void join(const participant_ptr& participant);
+    void leave(const participant_ptr& participant);
     void deliver(const message& msg);
-    void deliverToAll(const message& msg, const int& partecipantId);
+    void deliverToAllOnFile(const std::string& filename, const message& msg, const int& partecipantId);
     void send(const MessageSymbol& m);
     void dispatchMessages();
 
-    //TODO: struttura per tenere i file aperti (non funge)
-    //std::map<std::string, std::ofstream *> files;
-    const std::map<std::string, std::vector<Symbol>> &getRoomMap() const;
-
-    void setRoomMap(const std::map<std::string, std::vector<Symbol>> &roomMap);
-
+    void insertNewFileSymbols(const std::string&);
+    bool isFileInFileSymbols(const std::string&);
+    void insertParticipantInFile(const std::string& filename, const participant_ptr& participant);
+    MessageSymbol insertSymbol(const std::string&, int, char, int);
+    MessageSymbol eraseSymbol(const std::string&, int, int, int);
+    std::vector<int> generateNewPosition(const std::string&, int);
+    std::vector<Symbol> getSymbolsPerFile(const std::string& filename);
 private:
     Room() = default;
     std::set<participant_ptr> participants_;
@@ -46,6 +44,7 @@ private:
     message_queue recent_msgs_;
     msgInfo_queue infoMsgs_;
     std::map<std::string, std::vector<Symbol>> room_map_;
+    std::map<std::string, std::vector<participant_ptr>> participantsPerFile;
 };
 
 

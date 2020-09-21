@@ -51,7 +51,7 @@ std::string ManagementDB::handleLogin(const std::string user, const std::string 
     }
 }
 
-std::string ManagementDB::handleSignup(const std::string e, const std::string username, const std::string psw) {
+std::string ManagementDB::handleSignup(const std::string& e, const std::string username, const std::string psw) {
     QSqlDatabase db = connect();
     //TO DO, check per il controllo della mail
 
@@ -96,7 +96,7 @@ std::string ManagementDB::handleSignup(const std::string e, const std::string us
 
 }
 
-std::string ManagementDB::checkMail(const QString mail) {
+std::string ManagementDB::checkMail(const QString& mail) {
     QRegExp mailREX(R"(\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}\b)");
     mailREX.setCaseSensitivity(Qt::CaseInsensitive);
     mailREX.setPatternSyntax(QRegExp::RegExp);

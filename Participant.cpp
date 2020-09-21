@@ -26,7 +26,7 @@ const std::string &Participant::getCurrentFile() const {
 void Participant::setCurrentFile(const std::string &currentFile) {
     Participant::currentFile = currentFile;
 }
-MessageSymbol Participant::localInsert(int index, char c) {
+/*MessageSymbol Participant::localInsert(int index, char c) {
     std::vector<int> vector;
     if(_symbol.empty()){
         vector = {0};
@@ -42,9 +42,9 @@ MessageSymbol Participant::localInsert(int index, char c) {
 
     _symbol.insert(_symbol.begin()+index, s);
 
-    /*for (auto it = begin (_symbol); it != end (_symbol); ++it) {
-        std::cout<< it->getCharacter();
-    }*/
+    for (auto it = begin (_symbol); it != end (_symbol); ++it) {
+        //std::cout<< it->getCharacter();
+    //}
 
     MessageSymbol m(0, getId(), s, index);
     return m;
@@ -107,16 +107,17 @@ int Participant::comparePos(std::vector<int> currVetPos, std::vector<int> newVet
 }
 
 void Participant::process(const MessageSymbol &m) {
+    std::cout<<"in process"<<std::endl;
     auto type = m.getType();
     auto index = m.getNewIndex();
     if(type == 0){
-        /* INSERT */
+        // INSERT
         //caso di inserimento
         //int myIndex = _symbol.size();
         _symbol.insert(_symbol.begin()+index, m.getSymbol());
 
     }else if(type == 1){
-        /* REMOVE */
+        // REMOVE
         //int myIndex = _symbol.size();
         //_symbol.erase(_symbol.begin()+myIndex);
         for(auto it=_symbol.begin();it != _symbol.end(); it++){
@@ -127,7 +128,7 @@ void Participant::process(const MessageSymbol &m) {
         }
     }
 }
-
+*/
 const std::string &Participant::getColor() const {
     return color;
 }

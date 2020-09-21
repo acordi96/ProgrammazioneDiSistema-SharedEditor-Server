@@ -14,7 +14,7 @@ private:
     std::string currentFile;
     std::string username;
     std::string color;
-    std::vector<Symbol> _symbol;
+    //std::vector<Symbol> _symbol;
     std::vector<int> generatePos(int index, char c);
     int comparePos(std::vector<int> currVetPos, std::vector<int> newVetPos, int index);
 public:
