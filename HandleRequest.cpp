@@ -48,7 +48,7 @@ void HandleRequest::do_read_body() {
                                     json messageFromClient;
                                     try {
                                         std::string message = read_msg_.body();
-                                        if(message.find_first_of('}') < (message.size() + 1))
+                                        if (message.find_first_of('}') < (message.size() + 1))
                                             message[message.find_first_of('}') + 1] = '\0';
                                         messageFromClient = json::parse(message);
                                     } catch (...) {
@@ -64,7 +64,8 @@ void HandleRequest::do_read_body() {
                                     try {
                                         response = handleRequestType(messageFromClient, requestType);
                                     } catch (...) {
-                                        std::cout << "GENERIC ERROR HandleRequest of: " << messageFromClient << std::endl;
+                                        std::cout << "GENERIC ERROR HandleRequest of: " << messageFromClient
+                                                  << std::endl;
                                         do_read_header();
                                     }
 
@@ -185,11 +186,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
     } else if (type_request == "insert") {
         std::pair<int, char> message = js.at("corpo").get<std::pair<int, char>>();
         std::string currentFile = this->getCurrentFile();
-        //MessageSymbol messS = localInsert(message.first, message.second);
         MessageSymbol messS = Room::getInstance().insertSymbol(currentFile, message.first, message.second,
                                                                shared_from_this()->getId());
-        //Room::getInstance().send(messS);
-        //Room::getInstance().dispatchMessages();
         std::pair<int, char> corpo(messS.getNewIndex(), message.second);
         //salvataggio su file
         std::fstream file;
@@ -208,9 +206,6 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         std::string currentFile = this->getCurrentFile();
         MessageSymbol messS = Room::getInstance().eraseSymbol(currentFile, startIndex, endIndex,
                                                               shared_from_this()->getId());
-        //MessageSymbol messS = localErase(startIndex, endIndex);
-        //Room::getInstance().send(messS);
-        //Room::getInstance().dispatchMessages();
 
         //salvataggio su file
         std::fstream file;
@@ -350,19 +345,12 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                                   {"partToWrite",   i},
                                   {"ofPartToWrite", of},
                                   {"toWrite",       toWriteString}};
-                    /*for (int k = 0; k < toWriteString.length(); k++) {
-                        MessageSymbol messS = localInsert(k, toWriteString[k]);
-                        Room::getInstance().send(messS);
-                        Room::getInstance().dispatchMessages();
-                    }*/
                     // scrive Symbol nel file nella mappa della room
                     for (int k = 0; k < toWriteString.length(); k++) {
                         MessageSymbol messageInsertedSymbol = Room::getInstance().insertSymbol(nomeFile,
                                                                                                (i * maxBuffer) + k,
                                                                                                toWriteString[k],
                                                                                                shared_from_this()->getId());
-                        //Room::getInstance().send(messageInsertedSymbol);
-                        //Room::getInstance().dispatchMessages();
                     }
 
                     sendAtClient(j.dump());
@@ -377,19 +365,12 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                               {"partToWrite",   of},
                               {"ofPartToWrite", of},
                               {"toWrite",       toWriteString}};
-                /*for (int k = 0; k < toWriteString.length(); k++) {
-                    MessageSymbol messS = localInsert(k, toWriteString[k]);
-                    Room::getInstance().send(messS);
-                    Room::getInstance().dispatchMessages();
-                }*/
                 // scrive Symbol nel file nella mappa della room
                 for (int k = 0; k < toWriteString.length(); k++) {
                     MessageSymbol messageInsertedSymbol = Room::getInstance().insertSymbol(nomeFile,
                                                                                            (of * maxBuffer) + k,
                                                                                            toWriteString[k],
                                                                                            shared_from_this()->getId());
-                    //Room::getInstance().send(messageInsertedSymbol);
-                    //Room::getInstance().dispatchMessages();
                 }
                 sendAtClient(j.dump());
                 return j.dump();
@@ -434,22 +415,4 @@ void HandleRequest::deliver(const message &msg) {
     if (!write_in_progress) {
         do_write();
     }
-}
-
-std::string HandleRequest::generateRandomString(int length) {
-    std::string chars(
-            "abcdefghijklmnopqrstuvwxyz"
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-            "1234567890"
-            "!@#$%^&*()"
-            "`~-_=+[{]{\\|;:'\",<.>/?");
-    std::string salt;
-    boost::random::random_device rng;
-    boost::random::uniform_int_distribution<> index_dist(0, chars.size() - 1);
-    for (int i = 0; i < length; ++i) {
-        salt.append(1, chars[index_dist(rng)]);
-    }
-    //std::cout << std::endl;
-    //return std::__cxx11::string();
-    return salt;
 }

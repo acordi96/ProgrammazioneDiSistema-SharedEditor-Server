@@ -20,12 +20,15 @@ public:
     Symbol(char car, std::pair<int, int> id, std::vector<int> pos);
 
     const std::vector<int> &getPosizione() const;
+
     void setPosizione(const std::vector<int> &posizione);
 
     const std::pair<int, int> &getIdUser() const;
+
     void setIdUser(const std::pair<int, int> &idUser);
 
     char getCharacter() const;
+
     void setCharacter(char character);
 
 };

@@ -11,7 +11,9 @@
 #include <QtCore/QRegExp>
 #include "ManagementDB.h"
 #include "message.h"
+
 #define MAXBUFL 255
+
 #include <boost/thread.hpp>
 
 
@@ -19,10 +21,11 @@
 #include "Room.h"
 #include "Participant.h"
 #include "lib/json.hpp"
+
 using boost::asio::ip::tcp;
 using json = nlohmann::json;
 
-class HandleRequest : public Participant, public std::enable_shared_from_this<HandleRequest>{
+class HandleRequest : public Participant, public std::enable_shared_from_this<HandleRequest> {
 private:
     //attributi per far funzionare tutto
     tcp::socket socket;
@@ -30,18 +33,26 @@ private:
     message_queue write_msgs_;
     //gestione db
     ManagementDB manDB;
+
     //metodi
     void do_read_header();
+
     void do_read_body();
-    std::string handleRequestType(const json& json, const std::string& type_request);
+
+    std::string handleRequestType(const json &json, const std::string &type_request);
+
     void sendAtClient(std::string response);
-    void sendAllClient(const std::string& responde, const int &id);
-    std::string generateRandomString(int length);
+
+    void sendAllClient(const std::string &responde, const int &id);
+
 public:
     void start(int paticipantId);
+
     void do_write();
+
     explicit HandleRequest(tcp::socket socket);
-    void deliver(const message& msg);
+
+    void deliver(const message &msg);
 };
 
 

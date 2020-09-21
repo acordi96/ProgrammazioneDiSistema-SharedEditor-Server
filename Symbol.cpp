@@ -4,9 +4,13 @@
 
 #include "Symbol.h"
 
-Symbol::Symbol(char car, std::pair<int, int> id, std::vector<int> pos) : character(car), idUser(id), posizione(std::move(pos)) {
+#include <utility>
+
+Symbol::Symbol(char car, std::pair<int, int> id, std::vector<int> pos) : character(car), idUser(std::move(id)),
+                                                                         posizione(std::move(pos)) {
 
 }
+
 char Symbol::getCharacter() const {
     return character;
 }
