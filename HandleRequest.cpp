@@ -66,18 +66,10 @@ void HandleRequest::do_read_body() {
                                     } catch (...) {
                                         std::cout << "GENERIC ERROR HandleRequest of: " << messageFromClient
                                                   << std::endl;
+                                        sendAtClient(json{{"response", "handlerRequest generic error"}}.dump());
                                         do_read_header();
                                     }
 
-                                    if (requestType == "insert") {
-                                        sendAllClient(response, partecipantId);
-                                    } else if (requestType == "remove") {
-                                        sendAllClient(response, partecipantId);
-                                    } else if (requestType == "request_login" || requestType == "request_signup" ||
-                                               requestType == "request_new_file") {
-                                        sendAtClient(response);
-                                    }
-                                    //l'apertura file viene spedita direttamente man mano che legge per ottimizzare
                                     do_read_header();
                                 } else {
                                     Room::getInstance().leave(shared_from_this());
@@ -85,7 +77,7 @@ void HandleRequest::do_read_body() {
                             });
 }
 
-void HandleRequest::sendAtClient(std::string j_string) {
+void HandleRequest::sendAtClient(const std::string& j_string) {
     std::size_t len = j_string.size();
     message msg;
     msg.body_length(len);
@@ -156,6 +148,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                       {"username",  username},
                       {"colorUser", colorParticiapant.toStdString()},
                       {"files",     fileWithUser}};
+        sendAtClient(j.dump());
         return j.dump();
     } else if (type_request == "request_signup") {
         //prendi username e psw
@@ -179,6 +172,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         json j = json{{"response",  resDB},
                       {"username",  username},
                       {"colorUser", colorParticiapant.toStdString()}};
+        sendAtClient(j.dump());
         return j.dump();
     } else if (type_request == "R_LOGOUT") {
         json j = json{{"response", "logout"}};
@@ -198,6 +192,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
         json j = json{{"response", "insert_res"},
                       {"corpo",    corpo}};
+        sendAllClient(j.dump(), shared_from_this()->getId());
         return j.dump();
 
     } else if (type_request == "remove") {
@@ -233,6 +228,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         json j = json{{"response", "remove_res"},
                       {"start",    startIndex},
                       {"end",      endIndex}};
+        sendAllClient(j.dump(), shared_from_this()->getId());
         return j.dump();
     } else if (type_request == "request_new_file") {
 
@@ -272,6 +268,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             this->setCurrentFile(nomeFile);
 
             json j = json{{"response", "new_file_created"}};
+            sendAtClient(j.dump());
             return j.dump();
         } else {
             json j = json{{"response", "errore_salvataggio_file_db"}};
