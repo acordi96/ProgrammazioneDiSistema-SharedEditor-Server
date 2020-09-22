@@ -58,7 +58,6 @@ void HandleRequest::do_read_body() {
                                         do_read_header();
                                     }
                                     std::string requestType = messageFromClient.at("operation").get<std::string>();
-                                    int partecipantId = shared_from_this()->getId();
                                     //nella gestione devo tenere traccia del partecipante che invia la richiesta, quindi a chi devo rispondere e a chi no
                                     std::string response;
                                     try {
@@ -67,7 +66,6 @@ void HandleRequest::do_read_body() {
                                         std::cout << "GENERIC ERROR HandleRequest of: " << messageFromClient
                                                   << std::endl;
                                         sendAtClient(json{{"response", "handlerRequest generic error"}}.dump());
-                                        do_read_header();
                                     }
 
                                     do_read_header();
@@ -77,7 +75,7 @@ void HandleRequest::do_read_body() {
                             });
 }
 
-void HandleRequest::sendAtClient(const std::string& j_string) {
+void HandleRequest::sendAtClient(const std::string &j_string) {
     std::size_t len = j_string.size();
     message msg;
     msg.body_length(len);
@@ -175,7 +173,23 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         sendAtClient(j.dump());
         return j.dump();
     } else if (type_request == "R_LOGOUT") {
+        if(Room::getInstance().removeParticipantInFile(this->getCurrentFile(), shared_from_this()->getId())) {
+            std::cout<<Server::getTime()<<"DISCONNECT client "<<shared_from_this()->getId()<<" ("<<this->getUsername()<<"), FREE file "<<this->getCurrentFile()<<std::endl;
+        }
+        else {
+            //update clients on file
+            std::vector<participant_ptr> participantsOnFile = Room::getInstance().getParticipantsInFile(this->getCurrentFile());
+            std::vector<int> participantsOnFileId;
+            for (const auto &participant : participantsOnFile) {
+                participantsOnFileId.push_back(participant->getId());
+            }
+            json j = json{{"response", "update_participants"},
+                          {"idList",   participantsOnFileId}};
+            sendAllClient(j.dump(), shared_from_this()->getId());
+            std::cout<<Server::getTime()<<"DISCONNECT client "<<shared_from_this()->getId()<<" ("<<this->getUsername()<<")"<<std::endl;
+        }
         json j = json{{"response", "logout"}};
+        sendAtClient(j.dump());
         return j.dump();
     } else if (type_request == "insert") {
         std::pair<int, char> message = js.at("corpo").get<std::pair<int, char>>();
@@ -269,6 +283,11 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
             json j = json{{"response", "new_file_created"}};
             sendAtClient(j.dump());
+            //mando lista participant su quel file (solo p=lui per ora)
+            std::vector<int> participantsOnFileId(shared_from_this()->getId());
+            j = json{{"response", "update_participants"},
+                     {"idList",   participantsOnFileId}};
+            sendAtClient(j.dump());
             return j.dump();
         } else {
             json j = json{{"response", "errore_salvataggio_file_db"}};
@@ -321,7 +340,6 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                               {"ofPartToWrite", of},
                               {"toWrite",       std::string(toWrite)}};
                 sendAtClient(j.dump());
-                return j.dump();
             } else { //prima volta che il file viene aperto (lettura da file)
                 Room::getInstance().insertNewFileSymbols(nomeFile);
                 std::ifstream file;
@@ -370,9 +388,17 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                                                                                            shared_from_this()->getId());
                 }
                 sendAtClient(j.dump());
-                return j.dump();
-
             }
+            //aggiorna su ogni client lista di participant su questo file
+            std::vector<participant_ptr> participantsOnFile = Room::getInstance().getParticipantsInFile(nomeFile);
+            std::vector<int> participantsOnFileId;
+            for (const auto &participant : participantsOnFile) {
+                participantsOnFileId.push_back(participant->getId());
+            }
+            json j = json{{"response", "update_participants"},
+                          {"idList",   participantsOnFileId}};
+            sendAllClient(j.dump(), shared_from_this()->getId());
+            return "";
         } else {
             json j = json{{"response", "errore_apertura_file"}};
             return j.dump();

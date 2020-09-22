@@ -3,6 +3,7 @@
 //
 
 #include "Room.h"
+#include "Server.h"
 
 Room &Room::getInstance() {
     static Room instance;
@@ -126,4 +127,23 @@ void Room::insertParticipantInFile(const std::string &filename, const participan
 
 std::vector<Symbol> Room::getSymbolsPerFile(const std::string &filename) {
     return this->room_map_.at(filename);
+}
+
+std::vector<participant_ptr> Room::getParticipantsInFile(const std::string &filename) {
+    return this->participantsPerFile.at(filename);
+}
+
+bool Room::removeParticipantInFile(const std::string& filename, int id) {
+    for (auto it = this->participantsPerFile.at(filename).begin() ; it != this->participantsPerFile.at(filename).end(); ++it) {
+        if(it->get()->getId() == id) {
+            this->participantsPerFile.at(filename).erase(it);
+        }
+    }
+    //se era l'unico sul file dealloca
+    if(this->participantsPerFile.at(filename).empty()) {
+        this->participantsPerFile.erase(filename);
+        this->room_map_.erase(filename);
+        return true;
+    }
+    return false;
 }

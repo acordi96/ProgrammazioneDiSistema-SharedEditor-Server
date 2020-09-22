@@ -42,6 +42,10 @@ public:
 
     void insertParticipantInFile(const std::string &filename, const participant_ptr &participant);
 
+    bool removeParticipantInFile(const std::string& filename, int id);
+
+    std::vector<participant_ptr> getParticipantsInFile(const std::string& filename);
+
     MessageSymbol insertSymbol(const std::string &, int, char, int);
 
     MessageSymbol eraseSymbol(const std::string &, int, int, int);
