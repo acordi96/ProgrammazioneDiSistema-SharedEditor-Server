@@ -17,8 +17,8 @@
 #include <boost/thread.hpp>
 
 
+#include "Connection.h"
 #include "Server.h"
-#include "Room.h"
 #include "Participant.h"
 #include "lib/json.hpp"
 

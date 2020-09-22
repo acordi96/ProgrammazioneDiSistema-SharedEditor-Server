@@ -21,7 +21,7 @@ HandleRequest::HandleRequest(tcp::socket socket) : socket(std::move(socket)) {
 void HandleRequest::start(int participantId) {
     //dai un id al partecipante
     shared_from_this()->setSiteId(participantId);
-    Room::getInstance().join(shared_from_this());
+    Server::getInstance().join(shared_from_this());
     do_read_header();
 }
 
@@ -33,7 +33,7 @@ void HandleRequest::do_read_header() {
                                 if (!ec && read_msg_.decode_header()) {
                                     do_read_body();
                                 } else {
-                                    Room::getInstance().leave(shared_from_this());
+                                    Server::getInstance().leave(shared_from_this());
                                 }
                             });
 }
@@ -43,7 +43,7 @@ void HandleRequest::do_read_body() {
     boost::asio::async_read(socket, boost::asio::buffer(read_msg_.body(), read_msg_.body_length()),
                             [this, self](boost::system::error_code ec, std::size_t /*length*/) {
                                 if (!ec) {
-                                    std::cout << Server::getTime() << "REQUEST from client " << this->getId() - 1
+                                    std::cout << Connection::getTime() << "REQUEST from client " << this->getId() - 1
                                               << " (" << this->getUsername() << "): " << read_msg_.body() << std::endl;
                                     json messageFromClient;
                                     try {
@@ -70,7 +70,7 @@ void HandleRequest::do_read_body() {
 
                                     do_read_header();
                                 } else {
-                                    Room::getInstance().leave(shared_from_this());
+                                    Server::getInstance().leave(shared_from_this());
                                 }
                             });
 }
@@ -82,7 +82,7 @@ void HandleRequest::sendAtClient(const std::string &j_string) {
     std::memcpy(msg.body(), j_string.data(), msg.body_length());
     msg.body()[msg.body_length()] = '\0';
     msg.encode_header();
-    std::cout << Server::getTime() << "RESPONSE to client  " << this->getId() - 1 << " (" << this->getUsername()
+    std::cout << Connection::getTime() << "RESPONSE to client  " << this->getId() - 1 << " (" << this->getUsername()
               << "): " << msg.body() << std::endl;
     shared_from_this()->deliver(msg);
 
@@ -95,9 +95,10 @@ void HandleRequest::sendAllClient(const std::string &j_string, const int &id) {
     std::memcpy(msg.body(), j_string.data(), msg.body_length());
     msg.body()[msg.body_length()] = '\0';
     msg.encode_header();
-    std::cout << Server::getTime() << "RESPONSE to all clients on FILE " << this->getCurrentFile() << ": " << msg.body()
+    std::cout << Connection::getTime() << "RESPONSE to all clients on FILE " << this->getCurrentFile() << ": "
+              << msg.body()
               << std::endl;
-    Room::getInstance().deliverToAllOnFile(this->getCurrentFile(), msg, id);
+    Server::getInstance().deliverToAllOnFile(this->getCurrentFile(), msg, id);
 }
 
 void HandleRequest::do_write() {
@@ -159,7 +160,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
         //se la registrazione va bene, creo la cartella personale per il nuovo utente
         if (resDB == "SIGNUP_SUCCESS") {
-            std::cout << Server::getTime() << "SIGNUP SUCCESS client " << this->getId() << ": " << username
+            std::cout << Connection::getTime() << "SIGNUP SUCCESS client " << this->getId() << ": " << username
                       << std::endl;
             std::string path = boost::filesystem::current_path().string();
             path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
@@ -173,12 +174,13 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         sendAtClient(j.dump());
         return j.dump();
     } else if (type_request == "R_LOGOUT") {
-        if(Room::getInstance().removeParticipantInFile(this->getCurrentFile(), shared_from_this()->getId())) {
-            std::cout<<Server::getTime()<<"DISCONNECT client "<<shared_from_this()->getId()<<" ("<<this->getUsername()<<"), FREE file "<<this->getCurrentFile()<<std::endl;
-        }
-        else {
+        if (Server::getInstance().removeParticipantInFile(this->getCurrentFile(), shared_from_this()->getId())) {
+            std::cout << Connection::getTime() << "DISCONNECT client " << shared_from_this()->getId() << " ("
+                      << this->getUsername() << "), FREE file " << this->getCurrentFile() << std::endl;
+        } else {
             //update clients on file
-            std::vector<participant_ptr> participantsOnFile = Room::getInstance().getParticipantsInFile(this->getCurrentFile());
+            std::vector<participant_ptr> participantsOnFile = Server::getInstance().getParticipantsInFile(
+                    this->getCurrentFile());
             std::vector<int> participantsOnFileId;
             for (const auto &participant : participantsOnFile) {
                 participantsOnFileId.push_back(participant->getId());
@@ -186,7 +188,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             json j = json{{"response", "update_participants"},
                           {"idList",   participantsOnFileId}};
             sendAllClient(j.dump(), shared_from_this()->getId());
-            std::cout<<Server::getTime()<<"DISCONNECT client "<<shared_from_this()->getId()<<" ("<<this->getUsername()<<")"<<std::endl;
+            std::cout << Connection::getTime() << "DISCONNECT client " << shared_from_this()->getId() << " ("
+                      << this->getUsername() << ")" << std::endl;
         }
         json j = json{{"response", "logout"}};
         sendAtClient(j.dump());
@@ -194,8 +197,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
     } else if (type_request == "insert") {
         std::pair<int, char> message = js.at("corpo").get<std::pair<int, char>>();
         std::string currentFile = this->getCurrentFile();
-        MessageSymbol messS = Room::getInstance().insertSymbol(currentFile, message.first, message.second,
-                                                               shared_from_this()->getId());
+        MessageSymbol messS = Server::getInstance().insertSymbol(currentFile, message.first, message.second,
+                                                                 shared_from_this()->getId());
         std::pair<int, char> corpo(messS.getNewIndex(), message.second);
         //salvataggio su file
         std::fstream file;
@@ -213,8 +216,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         int startIndex = js.at("start").get<int>();
         int endIndex = js.at("end").get<int>();
         std::string currentFile = this->getCurrentFile();
-        MessageSymbol messS = Room::getInstance().eraseSymbol(currentFile, startIndex, endIndex,
-                                                              shared_from_this()->getId());
+        MessageSymbol messS = Server::getInstance().eraseSymbol(currentFile, startIndex, endIndex,
+                                                                shared_from_this()->getId());
 
         //salvataggio su file
         std::fstream file;
@@ -267,15 +270,15 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         newFile.close();
 
         //creo entry file-symbols nella map della room
-        Room::getInstance().insertNewFileSymbols(nomeFile);
+        Server::getInstance().insertNewFileSymbols(nomeFile);
         //aggiungo participant a lista participants del file
-        Room::getInstance().insertParticipantInFile(nomeFile, shared_from_this());
+        Server::getInstance().insertParticipantInFile(nomeFile, shared_from_this());
 
         //metto il file nel db con lo user
         std::string resDB = manDB.handleNewFile(js.at("username").get<std::string>(),
                                                 js.at("name").get<std::string>());
         if (resDB == "FILE_INSERT_SUCCESS") {
-            std::cout << Server::getTime() << "NEW FILE CREATED for client " << this->getId() << " ("
+            std::cout << Connection::getTime() << "NEW FILE CREATED for client " << this->getId() << " ("
                       << this->getUsername() << "): " << nomeFile << std::endl;
 
             // settare il current file
@@ -305,13 +308,13 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             this->setCurrentFile(nomeFile);
 
             //aggiungo participant a lista participants del file (anche se il file e' nuovo)
-            Room::getInstance().insertParticipantInFile(nomeFile, shared_from_this());
+            Server::getInstance().insertParticipantInFile(nomeFile, shared_from_this());
 
-            if (Room::getInstance().isFileInFileSymbols(nomeFile)) { //il file era gia' stato aperto (e' nella mappa)
+            if (Server::getInstance().isFileInFileSymbols(nomeFile)) { //il file era gia' stato aperto (e' nella mappa)
 
-                std::vector<Symbol> symbols = Room::getInstance().getSymbolsPerFile(nomeFile);
+                std::vector<Symbol> symbols = Server::getInstance().getSymbolsPerFile(nomeFile);
                 int dim = symbols.size();
-                std::cout << Server::getTime() << "OPEN (again) FILE (" << dim << " char) for client "
+                std::cout << Connection::getTime() << "OPEN (again) FILE (" << dim << " char) for client "
                           << this->getId() - 1 << " ("
                           << this->getUsername() << "): " << nomeFile << std::endl;
                 int of = dim / maxBuffer;
@@ -341,12 +344,12 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                               {"toWrite",       std::string(toWrite)}};
                 sendAtClient(j.dump());
             } else { //prima volta che il file viene aperto (lettura da file)
-                Room::getInstance().insertNewFileSymbols(nomeFile);
+                Server::getInstance().insertNewFileSymbols(nomeFile);
                 std::ifstream file;
                 file.open(nomeFile);
                 std::ifstream in(nomeFile, std::ifstream::ate | std::ifstream::binary);
                 int dim = in.tellg();
-                std::cout << Server::getTime() << "OPEN (first) FILE (" << dim << " char) for client "
+                std::cout << Connection::getTime() << "OPEN (first) FILE (" << dim << " char) for client "
                           << this->getId() - 1 << " ("
                           << this->getUsername() << "): " << nomeFile << std::endl;
                 char toWrite[maxBuffer];
@@ -362,10 +365,10 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                                   {"toWrite",       toWriteString}};
                     // scrive Symbol nel file nella mappa della room
                     for (int k = 0; k < toWriteString.length(); k++) {
-                        MessageSymbol messageInsertedSymbol = Room::getInstance().insertSymbol(nomeFile,
-                                                                                               (i * maxBuffer) + k,
-                                                                                               toWriteString[k],
-                                                                                               shared_from_this()->getId());
+                        MessageSymbol messageInsertedSymbol = Server::getInstance().insertSymbol(nomeFile,
+                                                                                                 (i * maxBuffer) + k,
+                                                                                                 toWriteString[k],
+                                                                                                 shared_from_this()->getId());
                     }
 
                     sendAtClient(j.dump());
@@ -382,15 +385,15 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                               {"toWrite",       toWriteString}};
                 // scrive Symbol nel file nella mappa della room
                 for (int k = 0; k < toWriteString.length(); k++) {
-                    MessageSymbol messageInsertedSymbol = Room::getInstance().insertSymbol(nomeFile,
-                                                                                           (of * maxBuffer) + k,
-                                                                                           toWriteString[k],
-                                                                                           shared_from_this()->getId());
+                    MessageSymbol messageInsertedSymbol = Server::getInstance().insertSymbol(nomeFile,
+                                                                                             (of * maxBuffer) + k,
+                                                                                             toWriteString[k],
+                                                                                             shared_from_this()->getId());
                 }
                 sendAtClient(j.dump());
             }
             //aggiorna su ogni client lista di participant su questo file
-            std::vector<participant_ptr> participantsOnFile = Room::getInstance().getParticipantsInFile(nomeFile);
+            std::vector<participant_ptr> participantsOnFile = Server::getInstance().getParticipantsInFile(nomeFile);
             std::vector<int> participantsOnFileId;
             for (const auto &participant : participantsOnFile) {
                 participantsOnFileId.push_back(participant->getId());
