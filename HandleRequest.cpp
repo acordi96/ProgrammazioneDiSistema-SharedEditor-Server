@@ -52,20 +52,16 @@ void HandleRequest::do_read_body() {
                                             message[message.find_first_of('}') + 1] = '\0';
                                         messageFromClient = json::parse(message);
                                     } catch (...) {
-                                        std::cout << "Json parse exception, ignoring request: " << messageFromClient
-                                                  << std::endl;
                                         sendAtClient(json{{"response", "json_parse_error"}}.dump());
                                         do_read_header();
                                     }
                                     std::string requestType = messageFromClient.at("operation").get<std::string>();
-                                    //nella gestione devo tenere traccia del partecipante che invia la richiesta, quindi a chi devo rispondere e a chi no
                                     std::string response;
                                     try {
                                         response = handleRequestType(messageFromClient, requestType);
                                     } catch (...) {
-                                        std::cout << "GENERIC ERROR HandleRequest of: " << messageFromClient
-                                                  << std::endl;
-                                        sendAtClient(json{{"response", "handlerRequest generic error"}}.dump());
+                                        std::cout<<"handleRequest ERROR: "<<errno<<std::endl;
+                                        sendAtClient(json{{"response", "handleRequest ERROR"}}.dump());
                                     }
 
                                     do_read_header();
@@ -201,11 +197,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                                                                  shared_from_this()->getId());
         std::pair<int, char> corpo(messS.getNewIndex(), message.second);
         //salvataggio su file
-        std::fstream file;
-        file.open(currentFile);
-        file.seekp(message.first);
-        file << message.second;
-        file.close();
+        Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false);
 
         json j = json{{"response", "insert_res"},
                       {"corpo",    corpo}};
@@ -220,27 +212,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                                                                 shared_from_this()->getId());
 
         //salvataggio su file
-        std::fstream file;
-        file.open(currentFile);
-        file.seekg(endIndex);
-        char c;
-        std::string text;
-        file.seekg(0);
-        for (int i = 0; i < startIndex; i++) {
-            file.get(c);
-            text += c;
-        }
-        file.seekg(endIndex);
-        while (file.get(c)) {
-            if (c == EOF)
-                break;
-            text += c;
-        }
-        file.close();
-        std::ofstream fileRiscritto;
-        fileRiscritto.open(currentFile);
-        fileRiscritto << text;
-        fileRiscritto.close();
+        Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false);
 
         json j = json{{"response", "remove_res"},
                       {"start",    startIndex},
@@ -259,20 +231,19 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             std::cout << "Cartella personale " << js.at("username") << " creata" << std::endl;
         }
         std::string nomeFile = path + "/" + js.at("name").get<std::string>() + ".txt";
-        // creo il file nuovo
-        if (boost::filesystem::exists(nomeFile)) {
-            std::cout << "File gia' esistente" << std::endl;
+
+        if (!boost::filesystem::exists(nomeFile)) {
+            //creo il file
+            std::ofstream newFile;
+            newFile.open(nomeFile, std::ofstream::out);
+            newFile.close();
+            Server::getInstance().openFile(nomeFile, shared_from_this());
+        }
+        else { //il file esiste gia'
             json j = json{{"response", "new_file_already_exist"}};
+            sendAtClient(j.dump());
             return j.dump();
         }
-        std::ofstream newFile;
-        newFile.open(nomeFile, std::ofstream::out);
-        newFile.close();
-
-        //creo entry file-symbols nella map della room
-        Server::getInstance().insertNewFileSymbols(nomeFile);
-        //aggiungo participant a lista participants del file
-        Server::getInstance().insertParticipantInFile(nomeFile, shared_from_this());
 
         //metto il file nel db con lo user
         std::string resDB = manDB.handleNewFile(js.at("username").get<std::string>(),
@@ -307,10 +278,10 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             std::string nomeFile = path + "/" + js.at("name").get<std::string>() + ".txt";
             this->setCurrentFile(nomeFile);
 
-            //aggiungo participant a lista participants del file (anche se il file e' nuovo)
-            Server::getInstance().insertParticipantInFile(nomeFile, shared_from_this());
-
             if (Server::getInstance().isFileInFileSymbols(nomeFile)) { //il file era gia' stato aperto (e' nella mappa)
+
+                //aggiungo participant a lista participants del file
+                Server::getInstance().insertParticipantInFile(nomeFile, shared_from_this());
 
                 std::vector<Symbol> symbols = Server::getInstance().getSymbolsPerFile(nomeFile);
                 int dim = symbols.size();
@@ -344,7 +315,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                               {"toWrite",       std::string(toWrite)}};
                 sendAtClient(j.dump());
             } else { //prima volta che il file viene aperto (lettura da file)
-                Server::getInstance().insertNewFileSymbols(nomeFile);
+                Server::getInstance().openFile(nomeFile, shared_from_this());
                 std::ifstream file;
                 file.open(nomeFile);
                 std::ifstream in(nomeFile, std::ifstream::ate | std::ifstream::binary);

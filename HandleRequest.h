@@ -12,8 +12,6 @@
 #include "ManagementDB.h"
 #include "message.h"
 
-#define MAXBUFL 255
-
 #include <boost/thread.hpp>
 
 
@@ -41,7 +39,7 @@ private:
 
     std::string handleRequestType(const json &json, const std::string &type_request);
 
-    void sendAtClient(const std::string& response);
+    void sendAtClient(const std::string &response);
 
     void sendAllClient(const std::string &responde, const int &id);
 

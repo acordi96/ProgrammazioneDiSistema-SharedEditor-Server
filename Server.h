@@ -36,9 +36,9 @@ public:
 
     void send(const MessageSymbol &m);
 
-    void insertNewFileSymbols(const std::string &);
+    void openFile(const std::string &filename, const participant_ptr& participant);
 
-    bool isFileInFileSymbols(const std::string &);
+    bool isFileInFileSymbols(const std::string &filename);
 
     void insertParticipantInFile(const std::string &filename, const participant_ptr &participant);
 
@@ -46,16 +46,20 @@ public:
 
     std::vector<participant_ptr> getParticipantsInFile(const std::string& filename);
 
-    MessageSymbol insertSymbol(const std::string &, int, char, int);
+    MessageSymbol insertSymbol(const std::string &filename, int index, char character, int id);
 
-    MessageSymbol eraseSymbol(const std::string &, int, int, int);
+    MessageSymbol eraseSymbol(const std::string &filename, int startIndex, int endIndex, int id);
 
     std::vector<int> generateNewPosition(const std::string &, int);
 
     std::vector<Symbol> getSymbolsPerFile(const std::string &filename);
 
+    void modFile(const std::string& filename, bool force);
+
 private:
     Server() = default;
+
+    ~Server();
 
     std::set<participant_ptr> participants_;
     enum {
@@ -63,8 +67,9 @@ private:
     };
     message_queue recent_msgs_;
     msgInfo_queue infoMsgs_;
-    std::map<std::string, std::vector<Symbol>> room_map_;
+    std::map<std::string, std::vector<Symbol>> symbolsPerFile;
     std::map<std::string, std::vector<participant_ptr>> participantsPerFile;
+    std::map<std::string, int> modsPerFile;
 };
 
 

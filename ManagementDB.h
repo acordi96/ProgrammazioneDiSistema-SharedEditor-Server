@@ -18,14 +18,14 @@ private:
     std::string response;
     QSqlDatabase database;
     static std::string checkMail(const QString& mail);
-    QString generateRandomColor();
+    static QString generateRandomColor();
 public:
-    std::string handleLogin(const std::string user, const std::string password, QString& color);
-    std::string handleSignup(const std::string& email,const std::string user,const std::string password);
-    std::string handleNewFile(const std::string user, const std::string file );
-    std::multimap<std::string,std::string> takeFiles(const std::string user);
-    std::string handleOpenFile(const std::string user, const std::string file);
-    std::string handleRenameFile(const std::string user, const std::string oldName, const std::string newName);
+    std::string handleLogin(const std::string& user, const std::string& password, QString& color);
+    std::string handleSignup(const std::string& email,const std::string& user,const std::string& password);
+    std::string handleNewFile(const std::string& user, const std::string& file );
+    std::multimap<std::string,std::string> takeFiles(const std::string& user);
+    std::string handleOpenFile(const std::string& user, const std::string& file);
+    std::string handleRenameFile(const std::string& user, const std::string& oldName, const std::string& newName);
 };
 
 

@@ -2,8 +2,20 @@
 // Created by Sam on 19/apr/2020.
 //
 
+#include <fstream>
+#include <boost/filesystem.hpp>
 #include "Server.h"
 #include "Connection.h"
+
+#define nModsBeforeWrite 1 //numero di modifiche per modificare il file (>0)
+
+Server::~Server() {
+    std::vector<std::string> openFiles;
+    for (auto &pair : this->symbolsPerFile)
+        openFiles.push_back(pair.first);
+    for (auto &filename : openFiles)
+        this->modFile(filename, true);
+}
 
 Server &Server::getInstance() {
     static Server instance;
@@ -45,31 +57,36 @@ void Server::send(const MessageSymbol &m) {
     infoMsgs_.push(m);
 }
 
-void Server::insertNewFileSymbols(const std::string &filename) {
-    this->room_map_.emplace(std::pair<std::string, std::vector<Symbol>>(filename, std::vector<Symbol>()));
+void Server::openFile(const std::string &filename, const participant_ptr &participant) {
+    //inserisco entry in mappa dei simboli
+    this->symbolsPerFile.emplace(std::pair<std::string, std::vector<Symbol>>(filename, std::vector<Symbol>()));
+    //inserisco entry in mappa delle modifiche
+    this->modsPerFile.emplace(std::pair<std::string, int>(filename, 0));
+    //aggiungo participant a lista participants del file
+    Server::getInstance().insertParticipantInFile(filename, participant);
 }
 
 bool Server::isFileInFileSymbols(const std::string &filename) {
-    if (this->room_map_.find(filename) == this->room_map_.end())
+    if (this->symbolsPerFile.find(filename) == this->symbolsPerFile.end())
         return false;
     return true;
 }
 
 MessageSymbol Server::insertSymbol(const std::string &filename, int index, char character, int id) {
     std::vector<int> vector;
-    if (this->room_map_.at(filename).empty()) {
+    if (this->symbolsPerFile.at(filename).empty()) {
         vector = {0};
         index = 0;
-    } else if (index > this->room_map_.at(filename).size() - 1) {
-        vector = {this->room_map_.at(filename).back().getPosizione().at(0) + 1};
-        index = this->room_map_.at(filename).size();
+    } else if (index > this->symbolsPerFile.at(filename).size() - 1) {
+        vector = {this->symbolsPerFile.at(filename).back().getPosizione().at(0) + 1};
+        index = this->symbolsPerFile.at(filename).size();
     } else if (index == 0) {
-        vector = {this->room_map_.at(filename).front().getPosizione().at(0) - 1};
+        vector = {this->symbolsPerFile.at(filename).front().getPosizione().at(0) - 1};
     } else
         vector = generateNewPosition(filename, index);
-    Symbol s(character, std::make_pair(id, this->room_map_.at(filename).size() + 1), vector);
+    Symbol s(character, std::make_pair(id, this->symbolsPerFile.at(filename).size() + 1), vector);
 
-    this->room_map_.at(filename).insert(this->room_map_.at(filename).begin() + index, s);
+    this->symbolsPerFile.at(filename).insert(this->symbolsPerFile.at(filename).begin() + index, s);
 
     MessageSymbol m(0, id, s, index);
 
@@ -77,16 +94,16 @@ MessageSymbol Server::insertSymbol(const std::string &filename, int index, char 
 }
 
 MessageSymbol Server::eraseSymbol(const std::string &filename, int startIndex, int endIndex, int id) {
-    Symbol s = this->room_map_.at(filename).at(startIndex);
-    this->room_map_.at(filename).erase(this->room_map_.at(filename).begin() + startIndex,
-                                       this->room_map_.at(filename).begin() + endIndex);
+    Symbol s = this->symbolsPerFile.at(filename).at(startIndex);
+    this->symbolsPerFile.at(filename).erase(this->symbolsPerFile.at(filename).begin() + startIndex,
+                                            this->symbolsPerFile.at(filename).begin() + endIndex);
     MessageSymbol m(1, id, s);
     return m;
 }
 
 std::vector<int> Server::generateNewPosition(const std::string &filename, int index) {
-    std::vector<int> posBefore = this->room_map_.at(filename)[index - 1].getPosizione();
-    std::vector<int> posAfter = this->room_map_.at(filename)[index].getPosizione();
+    std::vector<int> posBefore = this->symbolsPerFile.at(filename)[index - 1].getPosizione();
+    std::vector<int> posAfter = this->symbolsPerFile.at(filename)[index].getPosizione();
     std::vector<int> newPos;
     int idBefore = posBefore.at(0);
     int idAfter = posAfter.at(0);
@@ -124,24 +141,49 @@ void Server::insertParticipantInFile(const std::string &filename, const particip
 }
 
 std::vector<Symbol> Server::getSymbolsPerFile(const std::string &filename) {
-    return this->room_map_.at(filename);
+    return this->symbolsPerFile.at(filename);
 }
 
 std::vector<participant_ptr> Server::getParticipantsInFile(const std::string &filename) {
     return this->participantsPerFile.at(filename);
 }
 
-bool Server::removeParticipantInFile(const std::string& filename, int id) {
-    for (auto it = this->participantsPerFile.at(filename).begin() ; it != this->participantsPerFile.at(filename).end(); ++it) {
-        if(it->get()->getId() == id) {
+bool Server::removeParticipantInFile(const std::string &filename, int id) {
+    for (auto it = this->participantsPerFile.at(filename).begin();
+         it != this->participantsPerFile.at(filename).end(); ++it) {
+        if (it->get()->getId() == id) {
             this->participantsPerFile.at(filename).erase(it);
         }
     }
-    //se era l'unico sul file dealloca cose
-    if(this->participantsPerFile.at(filename).empty()) {
+    //se era l'unico/ultimo sul file
+    if (this->participantsPerFile.at(filename).empty()) {
+        //forza scrittura su file
+        this->modFile(filename, true);
+        //dealloca strutture
         this->participantsPerFile.erase(filename);
-        this->room_map_.erase(filename);
+        this->symbolsPerFile.erase(filename);
+        this->modsPerFile.erase(filename);
         return true;
     }
     return false;
 }
+
+void Server::modFile(const std::string &filename, bool force) {
+    if (++this->modsPerFile.at(filename) >= nModsBeforeWrite || force) {
+        this->modsPerFile.at(filename) = 0;
+        std::ofstream file;
+        file.open(filename);
+        char crdtToWrite[this->symbolsPerFile.at(filename).size()];
+        int i = 0;
+        for (auto &symbol : this->symbolsPerFile.at(filename)) {
+            crdtToWrite[i++] = symbol.getCharacter();
+        }
+        file.write(crdtToWrite, this->symbolsPerFile.at(filename).size());
+        file.close();
+        std::cout << Connection::getTime() << "UPDATED";
+        if (!force)
+            std::cout << " (" << nModsBeforeWrite << " mods)";
+        std::cout << " local FILE: " << filename << std::endl;
+    }
+}
+

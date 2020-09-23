@@ -4,7 +4,6 @@
 
 #include "ManagementDB.h"
 
-
 QSqlDatabase ManagementDB::connect() {
     if (this->database.databaseName() == "login") {
         return this->database;
@@ -26,7 +25,7 @@ QString ManagementDB::generateRandomColor() {
     return (QString::fromUtf8(color.data(), color.size()));
 }
 
-std::string ManagementDB::handleLogin(const std::string user, const std::string password, QString &color) {
+std::string ManagementDB::handleLogin(const std::string &user, const std::string &password, QString &color) {
     QSqlDatabase db = connect();
     if (db.open()) {
         QSqlQuery query;
@@ -51,10 +50,8 @@ std::string ManagementDB::handleLogin(const std::string user, const std::string 
     }
 }
 
-std::string ManagementDB::handleSignup(const std::string& e, const std::string username, const std::string psw) {
+std::string ManagementDB::handleSignup(const std::string &e, const std::string &username, const std::string &psw) {
     QSqlDatabase db = connect();
-    //TO DO, check per il controllo della mail
-
 
     if (db.open()) {
         QSqlQuery query;
@@ -96,7 +93,7 @@ std::string ManagementDB::handleSignup(const std::string& e, const std::string u
 
 }
 
-std::string ManagementDB::checkMail(const QString& mail) {
+std::string ManagementDB::checkMail(const QString &mail) {
     QRegExp mailREX(R"(\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}\b)");
     mailREX.setCaseSensitivity(Qt::CaseInsensitive);
     mailREX.setPatternSyntax(QRegExp::RegExp);
@@ -106,7 +103,7 @@ std::string ManagementDB::checkMail(const QString& mail) {
     return "EMAIL_OK";
 }
 
-std::string ManagementDB::handleOpenFile(const std::string user, const std::string file) {
+std::string ManagementDB::handleOpenFile(const std::string &user, const std::string &file) {
     QSqlDatabase db = connect();
 
     if (db.open()) {
@@ -128,7 +125,7 @@ std::string ManagementDB::handleOpenFile(const std::string user, const std::stri
         return "CONNESSION_ERROR_";
 }
 
-std::string ManagementDB::handleNewFile(const std::string user, const std::string file) {
+std::string ManagementDB::handleNewFile(const std::string &user, const std::string &file) {
     QSqlDatabase db = connect();
 
     if (db.open()) {
@@ -150,7 +147,7 @@ std::string ManagementDB::handleNewFile(const std::string user, const std::strin
 }
 
 /*std::list<std::string>*/
-std::multimap<std::string, std::string> ManagementDB::takeFiles(const std::string user) {
+std::multimap<std::string, std::string> ManagementDB::takeFiles(const std::string &user) {
     QSqlDatabase db = connect();
     if (db.open()) {
         QSqlQuery query;
@@ -178,7 +175,7 @@ std::multimap<std::string, std::string> ManagementDB::takeFiles(const std::strin
 }
 
 std::string
-ManagementDB::handleRenameFile(const std::string user, const std::string oldName, const std::string newName) {
+ManagementDB::handleRenameFile(const std::string &user, const std::string &oldName, const std::string &newName) {
     QSqlDatabase db = connect();
 
     if (db.open()) {
