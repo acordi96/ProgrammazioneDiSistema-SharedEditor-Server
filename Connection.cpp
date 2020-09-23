@@ -9,7 +9,7 @@ Connection::Connection(boost::asio::io_context &io_context, const tcp::endpoint 
 }
 
 void Connection::connection() {
-    std::cout << Connection::getTime() << "WAITING for client CONNECTION" << std::endl;
+    std::cout << Connection::getTime() << "WAITING FOR CLIENT CONNECTION" << std::endl;
     acceptor_.async_accept([this](boost::system::error_code ec, tcp::socket socket) {
         if (ec) {
             //non si riesce a connettere al server per vari motivi
@@ -17,8 +17,9 @@ void Connection::connection() {
             return;
         } else {
             //LEGGO LA RICHIESTA E LA PROCESSO
-            std::cout << Connection::getTime() << "CONNECTED to new client: " << count << std::endl;
-            std::make_shared<HandleRequest>(std::move(socket))->start(++count);
+            countId++;
+            std::cout << Connection::getTime() << "CONNECTED TO NEW CLIENT: " << countId << std::endl;
+            std::make_shared<HandleRequest>(std::move(socket))->start(countId);
         }
         connection();
     });

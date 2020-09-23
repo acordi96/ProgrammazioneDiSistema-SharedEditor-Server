@@ -43,7 +43,7 @@ void HandleRequest::do_read_body() {
     boost::asio::async_read(socket, boost::asio::buffer(read_msg_.body(), read_msg_.body_length()),
                             [this, self](boost::system::error_code ec, std::size_t /*length*/) {
                                 if (!ec) {
-                                    std::cout << Connection::getTime() << "REQUEST from client " << this->getId() - 1
+                                    std::cout << Connection::getTime() << "REQUEST FROM CLIENT " << this->getId()
                                               << " (" << this->getUsername() << "): " << read_msg_.body() << std::endl;
                                     json messageFromClient;
                                     try {
@@ -60,7 +60,7 @@ void HandleRequest::do_read_body() {
                                     try {
                                         response = handleRequestType(messageFromClient, requestType);
                                     } catch (...) {
-                                        std::cout<<"handleRequest ERROR: "<<errno<<std::endl;
+                                        std::cout << "handleRequest ERROR: " << errno << std::endl;
                                         sendAtClient(json{{"response", "handleRequest ERROR"}}.dump());
                                     }
 
@@ -78,7 +78,7 @@ void HandleRequest::sendAtClient(const std::string &j_string) {
     std::memcpy(msg.body(), j_string.data(), msg.body_length());
     msg.body()[msg.body_length()] = '\0';
     msg.encode_header();
-    std::cout << Connection::getTime() << "RESPONSE to client  " << this->getId() - 1 << " (" << this->getUsername()
+    std::cout << Connection::getTime() << "RESPONSE TO CLIENT  " << this->getId() << " (" << this->getUsername()
               << "): " << msg.body() << std::endl;
     shared_from_this()->deliver(msg);
 
@@ -91,7 +91,7 @@ void HandleRequest::sendAllClient(const std::string &j_string, const int &id) {
     std::memcpy(msg.body(), j_string.data(), msg.body_length());
     msg.body()[msg.body_length()] = '\0';
     msg.encode_header();
-    std::cout << Connection::getTime() << "RESPONSE to all clients on FILE " << this->getCurrentFile() << ": "
+    std::cout << Connection::getTime() << "RESPONSE TO ALL CLIENTS ON FILE " << this->getCurrentFile() << ": "
               << msg.body()
               << std::endl;
     Server::getInstance().deliverToAllOnFile(this->getCurrentFile(), msg, id);
@@ -156,8 +156,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
         //se la registrazione va bene, creo la cartella personale per il nuovo utente
         if (resDB == "SIGNUP_SUCCESS") {
-            std::cout << Connection::getTime() << "SIGNUP SUCCESS client " << this->getId() << ": " << username
-                      << std::endl;
+            std::cout << Connection::getTime() << "CLIENT " << this->getId() << " (" << username
+                      << ") SIGNUP SUCCESS " << std::endl;
             std::string path = boost::filesystem::current_path().string();
             path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
             path += "/files/" + js.at("username").get<std::string>();
@@ -170,11 +170,16 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         sendAtClient(j.dump());
         return j.dump();
     } else if (type_request == "R_LOGOUT") {
-        if (Server::getInstance().removeParticipantInFile(this->getCurrentFile(), shared_from_this()->getId())) {
-            std::cout << Connection::getTime() << "DISCONNECT client " << shared_from_this()->getId() << " ("
-                      << this->getUsername() << "), FREE file " << this->getCurrentFile() << std::endl;
+        json j = json{{"response", "logout"}};
+        sendAtClient(j.dump());
+        return j.dump();
+    } else if (type_request == "CLOSE_FILE") {
+        if (Server::getInstance().removeParticipantInFile(this->getCurrentFile(),
+                                                          shared_from_this()->getId())) { //era l'ultimo sul file
+            std::cout << Connection::getTime() << "CLIENT " << shared_from_this()->getId() << " ("
+                      << this->getUsername() << "), CLOSE AND FREE " << this->getCurrentFile() << std::endl;
         } else {
-            //update clients on file
+//ci sono altri sul file, li informo della mia uscita
             std::vector<participant_ptr> participantsOnFile = Server::getInstance().getParticipantsInFile(
                     this->getCurrentFile());
             std::vector<int> participantsOnFileId;
@@ -184,8 +189,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             json j = json{{"response", "update_participants"},
                           {"idList",   participantsOnFileId}};
             sendAllClient(j.dump(), shared_from_this()->getId());
-            std::cout << Connection::getTime() << "DISCONNECT client " << shared_from_this()->getId() << " ("
-                      << this->getUsername() << ")" << std::endl;
+            std::cout << Connection::getTime() << "CLIENT " << shared_from_this()->getId() << " ("
+                      << this->getUsername() << ") CLOSE FILE:" << std::endl;
         }
         json j = json{{"response", "logout"}};
         sendAtClient(j.dump());
@@ -238,8 +243,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             newFile.open(nomeFile, std::ofstream::out);
             newFile.close();
             Server::getInstance().openFile(nomeFile, shared_from_this());
-        }
-        else { //il file esiste gia'
+        } else { //il file esiste gia'
             json j = json{{"response", "new_file_already_exist"}};
             sendAtClient(j.dump());
             return j.dump();
@@ -249,7 +253,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         std::string resDB = manDB.handleNewFile(js.at("username").get<std::string>(),
                                                 js.at("name").get<std::string>());
         if (resDB == "FILE_INSERT_SUCCESS") {
-            std::cout << Connection::getTime() << "NEW FILE CREATED for client " << this->getId() << " ("
+            std::cout << Connection::getTime() << "NEW FILE CREATED FOR CLIENT " << this->getId() << " ("
                       << this->getUsername() << "): " << nomeFile << std::endl;
 
             // settare il current file
@@ -285,9 +289,9 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
                 std::vector<Symbol> symbols = Server::getInstance().getSymbolsPerFile(nomeFile);
                 int dim = symbols.size();
-                std::cout << Connection::getTime() << "OPEN (again) FILE (" << dim << " char) for client "
-                          << this->getId() - 1 << " ("
-                          << this->getUsername() << "): " << nomeFile << std::endl;
+                std::cout << Connection::getTime() << "CLIENT " << this->getId() << " ("
+                          << this->getUsername() << ") OPEN (NOT NEW) FILE (" << dim << " char): " << nomeFile
+                          << std::endl;
                 int of = dim / maxBuffer;
                 int i = 0;
                 std::string toWrite;
@@ -320,9 +324,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 file.open(nomeFile);
                 std::ifstream in(nomeFile, std::ifstream::ate | std::ifstream::binary);
                 int dim = in.tellg();
-                std::cout << Connection::getTime() << "OPEN (first) FILE (" << dim << " char) for client "
-                          << this->getId() - 1 << " ("
-                          << this->getUsername() << "): " << nomeFile << std::endl;
+                std::cout << Connection::getTime() << "CLIENT " << this->getId() << " ("
+                          << this->getUsername() << ") OPEN (NEW) FILE (" << dim << " char): " << nomeFile << std::endl;
                 char toWrite[maxBuffer];
                 int of = dim / maxBuffer;
                 int i = 0;

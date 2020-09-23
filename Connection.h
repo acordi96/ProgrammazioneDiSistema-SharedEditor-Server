@@ -17,7 +17,7 @@ using boost::asio::ip::tcp;
 //QUESTA E' LA CLASSE DI PARTENZA!
 class Connection {
 private:
-    int count = 1;
+    int countId = 0;
     tcp::acceptor acceptor_;
     void connection();
 public:
