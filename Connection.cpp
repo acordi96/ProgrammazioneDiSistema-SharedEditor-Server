@@ -9,7 +9,7 @@ Connection::Connection(boost::asio::io_context &io_context, const tcp::endpoint 
 }
 
 void Connection::connection() {
-    std::cout << Connection::getTime() << "WAITING FOR CLIENT CONNECTION" << std::endl;
+    std::cout << Connection::getTime() << "WAITING FOR CLIENT CONNECTIONS ON PORT " << acceptor_.local_endpoint().port() << std::endl;
     acceptor_.async_accept([this](boost::system::error_code ec, tcp::socket socket) {
         if (ec) {
             //non si riesce a connettere al server per vari motivi

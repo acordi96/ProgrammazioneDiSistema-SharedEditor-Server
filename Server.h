@@ -32,17 +32,21 @@ public:
 
     void deliver(const message &msg);
 
-    void deliverToAllOnFile(const std::string &filename, const message &msg, const int &partecipantId);
+    void deliverToAllOnFile(const message &msg, const participant_ptr& participant);
 
     void send(const MessageSymbol &m);
 
-    void openFile(const std::string &filename, const participant_ptr& participant);
+    void openFile(const participant_ptr& participant);
+
+    std::vector<int> closeFile(const participant_ptr& participant);
 
     bool isFileInFileSymbols(const std::string &filename);
 
-    void insertParticipantInFile(const std::string &filename, const participant_ptr &participant);
+    void insertParticipantInFile(const participant_ptr &participant);
 
     bool removeParticipantInFile(const std::string& filename, int id);
+
+    void removeParticipant(const participant_ptr& participant);
 
     std::vector<participant_ptr> getParticipantsInFile(const std::string& filename);
 

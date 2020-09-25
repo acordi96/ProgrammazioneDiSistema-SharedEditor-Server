@@ -7,7 +7,7 @@
 #include "Server.h"
 #include "Connection.h"
 
-#define nModsBeforeWrite 1 //numero di modifiche per modificare il file (>0)
+#define nModsBeforeWrite 15 //numero di modifiche per modificare il file (>0)
 
 Server::~Server() {
     std::vector<std::string> openFiles;
@@ -39,15 +39,15 @@ void Server::deliver(const message &msg) {
         p->deliver(msg);
 }
 
-void Server::deliverToAllOnFile(const std::string &filename, const message &msg, const int &partecipantId) {
+void Server::deliverToAllOnFile(const message &msg, const participant_ptr& participant) {
     recent_msgs_.push_back(msg);
 
     while (recent_msgs_.size() > max_recent_msgs)
         recent_msgs_.pop_front();
 
     //non a tutti ma a tutti su quel file
-    for (const auto &p: this->participantsPerFile.at(filename)) {
-        if (p->getId() != partecipantId) {
+    for (const auto &p: this->participantsPerFile.at(participant->getCurrentFile())) {
+        if (p->getId() != participant->getId()) {
             p->deliver(msg);
         }
     }
@@ -57,13 +57,13 @@ void Server::send(const MessageSymbol &m) {
     infoMsgs_.push(m);
 }
 
-void Server::openFile(const std::string &filename, const participant_ptr &participant) {
+void Server::openFile(const participant_ptr &participant) {
     //inserisco entry in mappa dei simboli
-    this->symbolsPerFile.emplace(std::pair<std::string, std::vector<Symbol>>(filename, std::vector<Symbol>()));
+    this->symbolsPerFile.emplace(std::pair<std::string, std::vector<Symbol>>(participant->getCurrentFile(), std::vector<Symbol>()));
     //inserisco entry in mappa delle modifiche
-    this->modsPerFile.emplace(std::pair<std::string, int>(filename, 0));
+    this->modsPerFile.emplace(std::pair<std::string, int>(participant->getCurrentFile(), 0));
     //aggiungo participant a lista participants del file
-    Server::getInstance().insertParticipantInFile(filename, participant);
+    Server::getInstance().insertParticipantInFile(participant);
 }
 
 bool Server::isFileInFileSymbols(const std::string &filename) {
@@ -129,15 +129,16 @@ std::vector<int> Server::generateNewPosition(const std::string &filename, int in
             return newPos;
         }
     }
+    return std::vector<int>();
 }
 
-void Server::insertParticipantInFile(const std::string &filename, const participant_ptr &participant) {
-    if (this->participantsPerFile.find(filename) == this->participantsPerFile.end()) {
+void Server::insertParticipantInFile(const participant_ptr &participant) {
+    if (this->participantsPerFile.find(participant->getCurrentFile()) == this->participantsPerFile.end()) {
         std::vector<participant_ptr> newVector;
         newVector.push_back(participant);
-        this->participantsPerFile.insert(std::make_pair(filename, newVector));
+        this->participantsPerFile.insert(std::make_pair(participant->getCurrentFile(), newVector));
     } else
-        this->participantsPerFile.at(filename).push_back(participant);
+        this->participantsPerFile.at(participant->getCurrentFile()).push_back(participant);
 }
 
 std::vector<Symbol> Server::getSymbolsPerFile(const std::string &filename) {
@@ -153,10 +154,10 @@ bool Server::removeParticipantInFile(const std::string &filename, int id) {
          it != this->participantsPerFile.at(filename).end(); ++it) {
         if (it->get()->getId() == id) {
             this->participantsPerFile.at(filename).erase(it);
+            break;
         }
     }
-    //se era l'unico/ultimo sul file
-    if (this->participantsPerFile.at(filename).empty()) {
+    if (this->participantsPerFile.at(filename).empty()) {    //se era l'unico/ultimo sul file
         //forza scrittura su file
         this->modFile(filename, true);
         //dealloca strutture
@@ -169,8 +170,11 @@ bool Server::removeParticipantInFile(const std::string &filename, int id) {
 }
 
 void Server::modFile(const std::string &filename, bool force) {
-    if (++this->modsPerFile.at(filename) >= nModsBeforeWrite || force) {
-        this->modsPerFile.at(filename) = 0;
+    if (force && (this->modsPerFile.at(filename) == 0)) //scrittura forzata ma file gia' sincronizzato
+        return;
+    if (!force)
+        this->modsPerFile.at(filename)++;
+    if (this->modsPerFile.at(filename) >= nModsBeforeWrite || force) {
         std::ofstream file;
         file.open(filename);
         char crdtToWrite[this->symbolsPerFile.at(filename).size()];
@@ -180,10 +184,33 @@ void Server::modFile(const std::string &filename, bool force) {
         }
         file.write(crdtToWrite, this->symbolsPerFile.at(filename).size());
         file.close();
-        std::cout << Connection::getTime() << "UPDATED";
-        if (!force)
-            std::cout << " (" << nModsBeforeWrite << " mods)";
-        std::cout << " local FILE: " << filename << std::endl;
+        std::cout << Connection::getTime() << "UPDATED" << " (" << this->modsPerFile.at(filename) << " MODS)"
+                  << " LOCAL FILE: " << filename << std::endl;
+        this->modsPerFile.at(filename) = 0;
     }
 }
 
+void Server::removeParticipant(const participant_ptr &participant) {
+    for (auto it = participants_.begin(); it != participants_.end(); ++it) {
+        if (it->get()->getId() == participant->getId()) {
+            this->participants_.erase(it);
+            break;
+        }
+    }
+}
+
+std::vector<int> Server::closeFile(const participant_ptr &participant) {
+    std::vector<int> othersOnFile;
+    if (this->removeParticipantInFile(participant->getCurrentFile(),
+                                      participant->getId())) { //era l'ultimo sul file
+        return othersOnFile;
+    } else {
+//ci sono altri sul file, li informo della mia uscita
+        std::vector<participant_ptr> participantsOnFile = Server::getInstance().getParticipantsInFile(
+                participant->getCurrentFile());
+        for (const auto &participants : participantsOnFile) {
+            othersOnFile.push_back(participants->getId());
+        }
+        return othersOnFile;
+    }
+}
