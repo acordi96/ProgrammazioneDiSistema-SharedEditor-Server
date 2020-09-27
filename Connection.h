@@ -12,6 +12,7 @@
 #include <boost/asio.hpp>
 #include "HandleRequest.h"
 #include "Server.h"
+
 using boost::asio::ip::tcp;
 
 //QUESTA E' LA CLASSE DI PARTENZA!
@@ -19,10 +20,13 @@ class Connection {
 private:
     int countId = 0;
     tcp::acceptor acceptor_;
+
     void connection();
+
 public:
-    Connection(boost::asio::io_context& io_context, const tcp::endpoint& endpoint);
-    static std::string getTime();
+    Connection(boost::asio::io_context &io_context, const tcp::endpoint &endpoint);
+
+    static std::string output(std::thread::id threadId);
 };
 
 

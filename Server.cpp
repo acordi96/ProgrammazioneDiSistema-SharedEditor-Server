@@ -7,7 +7,7 @@
 #include "Server.h"
 #include "Connection.h"
 
-#define nModsBeforeWrite 15 //numero di modifiche per modificare il file (>0)
+#define nModsBeforeWrite 15 //numero di m/home/jaceschrist/Documents/progettoPDS/serverPDSodifiche per modificare il file (>0)
 
 Server::~Server() {
     std::vector<std::string> openFiles;
@@ -184,7 +184,7 @@ void Server::modFile(const std::string &filename, bool force) {
         }
         file.write(crdtToWrite, this->symbolsPerFile.at(filename).size());
         file.close();
-        std::cout << Connection::getTime() << "UPDATED" << " (" << this->modsPerFile.at(filename) << " MODS)"
+        std::cout << Connection::output(std::this_thread::get_id()) << "UPDATED" << " (" << this->modsPerFile.at(filename) << " MODS)"
                   << " LOCAL FILE: " << filename << std::endl;
         this->modsPerFile.at(filename) = 0;
     }

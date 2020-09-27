@@ -4,10 +4,10 @@
 
 #include "ManagementDB.h"
 
-QSqlDatabase ManagementDB::connect() {
-    if (this->database.databaseName() == "login") {
+QSqlDatabase ManagementDB::connect() { //TODO: database and multithreading
+    /*if (this->database.databaseName() == "login") {
         return this->database;
-    }
+    }*/
     this->database = QSqlDatabase::addDatabase("QMYSQL");
     this->database.setHostName("localhost");
     this->database.setUserName("root");

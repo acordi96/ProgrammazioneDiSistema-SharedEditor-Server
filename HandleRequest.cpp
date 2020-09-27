@@ -14,9 +14,7 @@
 
 #define maxBuffer 5000
 
-HandleRequest::HandleRequest(tcp::socket socket) : socket(std::move(socket)) {
-
-}
+HandleRequest::HandleRequest(tcp::socket socket) : socket(std::move(socket)) {}
 
 void HandleRequest::start(int participantId) {
     //dai un id al partecipante
@@ -31,7 +29,6 @@ void HandleRequest::do_read_header() {
     boost::asio::async_read(socket, boost::asio::buffer(read_msg_.data(), message::header_length),
                             [this, self](boost::system::error_code ec, std::size_t /*length*/) {
                                 if (!ec && read_msg_.decode_header()) {
-                                    Server::getInstance();
                                     do_read_body();
                                 } else {
                                     Server::getInstance().leave(shared_from_this());
@@ -44,7 +41,8 @@ void HandleRequest::do_read_body() {
     boost::asio::async_read(socket, boost::asio::buffer(read_msg_.body(), read_msg_.body_length()),
                             [this, self](boost::system::error_code ec, std::size_t /*length*/) {
                                 if (!ec) {
-                                    std::cout << Connection::getTime() << "REQUEST FROM CLIENT " << this->getId()
+                                    std::cout << Connection::output(std::this_thread::get_id())
+                                              << "REQUEST FROM CLIENT " << this->getId()
                                               << " (" << this->getUsername() << "): " << read_msg_.body() << std::endl;
                                     json messageFromClient;
                                     try {
@@ -79,7 +77,8 @@ void HandleRequest::sendAtClient(const std::string &j_string) {
     std::memcpy(msg.body(), j_string.data(), msg.body_length());
     msg.body()[msg.body_length()] = '\0';
     msg.encode_header();
-    std::cout << Connection::getTime() << "RESPONSE TO CLIENT " << this->getId() << " (" << this->getUsername()
+    std::cout << Connection::output(std::this_thread::get_id()) << "RESPONSE TO CLIENT " << this->getId() << " ("
+              << this->getUsername()
               << "): " << msg.body() << std::endl;
     shared_from_this()->deliver(msg);
 
@@ -92,7 +91,8 @@ void HandleRequest::sendAllClient(const std::string &j_string, const int &id) {
     std::memcpy(msg.body(), j_string.data(), msg.body_length());
     msg.body()[msg.body_length()] = '\0';
     msg.encode_header();
-    std::cout << Connection::getTime() << "RESPONSE TO ALL CLIENTS ON FILE " << this->getCurrentFile() << ": "
+    std::cout << Connection::output(std::this_thread::get_id()) << "RESPONSE TO ALL CLIENTS ON FILE "
+              << this->getCurrentFile() << ": "
               << msg.body()
               << std::endl;
     Server::getInstance().deliverToAllOnFile(msg, shared_from_this());
@@ -130,6 +130,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         if (resDB == "LOGIN_SUCCESS") {
             shared_from_this()->setUsername(username);
             shared_from_this()->setColor(colorParticiapant.toStdString());
+            shared_from_this()->setCurrentFile("");
             //recupero tutti i file dell'utente
             risultato = manDB.takeFiles(username);
             std::string string;
@@ -157,13 +158,14 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
         //se la registrazione va bene, creo la cartella personale per il nuovo utente
         if (resDB == "SIGNUP_SUCCESS") {
-            std::cout << Connection::getTime() << "CLIENT " << this->getId() << " (" << username
+            std::cout << Connection::output(std::this_thread::get_id()) << "CLIENT " << this->getId() << " ("
+                      << username
                       << ") SIGNUP SUCCESS " << std::endl;
             std::string path = boost::filesystem::current_path().string();
             path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
             path += "/files/" + js.at("username").get<std::string>();
             boost::filesystem::create_directory(path);
-            shared_from_this()->setUsername(username); //TODO: cos'e'??
+            shared_from_this()->setUsername(username);
         }
         json j = json{{"response",  resDB},
                       {"username",  username},
@@ -171,17 +173,22 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         sendAtClient(j.dump());
         return j.dump();
     } else if (type_request == "req_logout") {
-        std::vector<int> othersOnFile = Server::getInstance().closeFile(shared_from_this());
-        if (othersOnFile.empty()) { //nessun altro sul file
-            std::cout << Connection::getTime() << "CLIENT " << shared_from_this()->getId() << " ("
-                      << shared_from_this()->getUsername() << ") LOGOUT AND FREE FILE: "
-                      << shared_from_this()->getCurrentFile() << std::endl;
-        } else { //altri sul file
-            json j = json{{"response", "update_participants"},
-                          {"idList",   othersOnFile}};
-            sendAllClient(j.dump(), shared_from_this()->getId());
-            std::cout << Connection::getTime() << "CLIENT " << shared_from_this()->getId() << " ("
-                      << shared_from_this()->getUsername() << ") LOGOUT" << std::endl;
+        if (!shared_from_this()->getCurrentFile().empty()) {
+            std::vector<int> othersOnFile = Server::getInstance().closeFile(shared_from_this());
+            if (othersOnFile.empty()) { //nessun altro sul file
+                std::cout << Connection::output(std::this_thread::get_id()) << "CLIENT " << shared_from_this()->getId()
+                          << " ("
+                          << shared_from_this()->getUsername() << ") LOGOUT AND FREE FILE: "
+                          << shared_from_this()->getCurrentFile() << std::endl;
+            } else { //altri sul file
+                json j = json{{"response", "update_participants"},
+                              {"idList",   othersOnFile}};
+                sendAllClient(j.dump(), shared_from_this()->getId());
+                std::cout << Connection::output(std::this_thread::get_id()) << "CLIENT " << shared_from_this()->getId()
+                          << " ("
+                          << shared_from_this()->getUsername() << ") LOGOUT, STILL OPENED FILE: "
+                          << shared_from_this()->getCurrentFile() << std::endl;
+            }
         }
         //rimuovi partipipant
         Server::getInstance().removeParticipant(shared_from_this());
@@ -191,21 +198,25 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
     } else if (type_request == "close_file") {
         std::vector<int> othersOnFile = Server::getInstance().closeFile(shared_from_this());
         if (othersOnFile.empty()) { //nessun altro sul file
-            std::cout << Connection::getTime() << "CLIENT " << shared_from_this()->getId() << " ("
+            std::cout << Connection::output(std::this_thread::get_id()) << "CLIENT " << shared_from_this()->getId()
+                      << " ("
                       << shared_from_this()->getUsername() << ") CLOSE AND FREE FILE: "
                       << shared_from_this()->getCurrentFile() << std::endl;
         } else { //altri sul file
             json j = json{{"response", "update_participants"},
                           {"idList",   othersOnFile}};
             sendAllClient(j.dump(), shared_from_this()->getId());
-            std::cout << Connection::getTime() << "CLIENT " << shared_from_this()->getId() << " ("
-                      << shared_from_this()->getUsername() << ") CLOSE FILE" << std::endl;
+            std::cout << Connection::output(std::this_thread::get_id()) << "CLIENT " << shared_from_this()->getId()
+                      << " ("
+                      << shared_from_this()->getUsername() << ") CLOSE FILE: " << shared_from_this()->getCurrentFile()
+                      << std::endl;
         }
+        shared_from_this()->setCurrentFile("");
         json j = json{{"response", "file_closed"}};
         sendAtClient(j.dump());
         return j.dump();
     } else if (type_request == "insert") {
-        std::pair<int, char> message = js.at("corpo").get<std::pair<int, char>>();
+        std::pair<int, char> message = js.at("corpo").get<std::pair<int, char >>();
         std::string currentFile = this->getCurrentFile();
         MessageSymbol messS = Server::getInstance().insertSymbol(currentFile, message.first, message.second,
                                                                  shared_from_this()->getId());
@@ -235,6 +246,12 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         return j.dump();
     } else if (type_request == "request_new_file") {
 
+        if (js.at("name").empty()) {
+            json j = json{{"response", "invalid_name"}};
+            sendAtClient(j.dump());
+            return j.dump();
+        }
+
         std::string path = boost::filesystem::current_path().string();
         path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
         path += "/files/" + js.at("username").get<std::string>();
@@ -244,28 +261,29 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             boost::filesystem::create_directory(personalDir);
             std::cout << "Cartella personale " << js.at("username") << " creata" << std::endl;
         }
-        std::string nomeFile = path + "/" + js.at("name").get<std::string>() + ".txt";
+        std::string filename = path + "/" + js.at("name").get<std::string>() + ".txt";
 
-        if (!boost::filesystem::exists(nomeFile)) { //creo finicamente il file
+        if (!boost::filesystem::exists(filename)) { //creo finicamente il file
             std::ofstream newFile;
-            newFile.open(nomeFile, std::ofstream::out);
+            newFile.open(filename, std::ofstream::out);
             newFile.close();
-            Server::getInstance().openFile(shared_from_this());
         } else { //il file esiste gia'
             json j = json{{"response", "new_file_already_exist"}};
             sendAtClient(j.dump());
             return j.dump();
         }
 
+        // settare il current file
+        this->setCurrentFile(filename);
+
         //metto il file nel db con lo user
         std::string resDB = manDB.handleNewFile(js.at("username").get<std::string>(),
                                                 js.at("name").get<std::string>());
         if (resDB == "FILE_INSERT_SUCCESS") {
-            std::cout << Connection::getTime() << "NEW FILE CREATED FOR CLIENT " << this->getId() << " ("
-                      << this->getUsername() << "): " << nomeFile << std::endl;
+            std::cout << Connection::output(std::this_thread::get_id()) << "NEW FILE CREATED FOR CLIENT "
+                      << this->getId() << " ("
+                      << this->getUsername() << "): " << filename << std::endl;
 
-            // settare il current file
-            this->setCurrentFile(nomeFile);
             //stanzio le strutture
             Server::getInstance().openFile(shared_from_this());
 
@@ -289,18 +307,18 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             std::string path = boost::filesystem::current_path().string();
             path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
             path += "/files/" + js.at("username").get<std::string>();
-            std::string nomeFile = path + "/" + js.at("name").get<std::string>() + ".txt";
-            this->setCurrentFile(nomeFile);
+            std::string filename = path + "/" + js.at("name").get<std::string>() + ".txt";
+            this->setCurrentFile(filename);
 
-            if (Server::getInstance().isFileInFileSymbols(nomeFile)) { //il file era gia' stato aperto (e' nella mappa)
+            if (Server::getInstance().isFileInFileSymbols(filename)) { //il file era gia' stato aperto (e' nella mappa)
 
                 //aggiungo participant a lista participants del file
                 Server::getInstance().insertParticipantInFile(shared_from_this());
 
-                std::vector<Symbol> symbols = Server::getInstance().getSymbolsPerFile(nomeFile);
+                std::vector<Symbol> symbols = Server::getInstance().getSymbolsPerFile(filename);
                 int dim = symbols.size();
-                std::cout << Connection::getTime() << "CLIENT " << this->getId() << " ("
-                          << this->getUsername() << ") OPEN (NOT NEW) FILE (" << dim << " char): " << nomeFile
+                std::cout << Connection::output(std::this_thread::get_id()) << "CLIENT " << this->getId() << " ("
+                          << this->getUsername() << ") OPEN (NOT NEW) FILE (" << dim << " char): " << filename
                           << std::endl;
                 int of = dim / maxBuffer;
                 int i = 0;
@@ -331,11 +349,11 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             } else { //prima volta che il file viene aperto (lettura da file)
                 Server::getInstance().openFile(shared_from_this());
                 std::ifstream file;
-                file.open(nomeFile);
-                std::ifstream in(nomeFile, std::ifstream::ate | std::ifstream::binary);
+                file.open(filename);
+                std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
                 int dim = in.tellg();
-                std::cout << Connection::getTime() << "CLIENT " << this->getId() << " ("
-                          << this->getUsername() << ") OPEN (NEW) FILE (" << dim << " char): " << nomeFile << std::endl;
+                std::cout << Connection::output(std::this_thread::get_id()) << "CLIENT " << this->getId() << " ("
+                          << this->getUsername() << ") OPEN (NEW) FILE (" << dim << " char): " << filename << std::endl;
                 char toWrite[maxBuffer];
                 int of = dim / maxBuffer;
                 int i = 0;
@@ -349,7 +367,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                                   {"toWrite",       toWriteString}};
                     // scrive Symbol nel file nella mappa della room
                     for (int k = 0; k < toWriteString.length(); k++) {
-                        MessageSymbol messageInsertedSymbol = Server::getInstance().insertSymbol(nomeFile,
+                        MessageSymbol messageInsertedSymbol = Server::getInstance().insertSymbol(filename,
                                                                                                  (i * maxBuffer) + k,
                                                                                                  toWriteString[k],
                                                                                                  shared_from_this()->getId());
@@ -369,7 +387,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                               {"toWrite",       toWriteString}};
                 // scrive Symbol nel file nella mappa della room
                 for (int k = 0; k < toWriteString.length(); k++) {
-                    MessageSymbol messageInsertedSymbol = Server::getInstance().insertSymbol(nomeFile,
+                    MessageSymbol messageInsertedSymbol = Server::getInstance().insertSymbol(filename,
                                                                                              (of * maxBuffer) + k,
                                                                                              toWriteString[k],
                                                                                              shared_from_this()->getId());
@@ -377,7 +395,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 sendAtClient(j.dump());
             }
             //aggiorna su ogni client lista di participant su questo file
-            std::vector<participant_ptr> participantsOnFile = Server::getInstance().getParticipantsInFile(nomeFile);
+            std::vector<participant_ptr> participantsOnFile = Server::getInstance().getParticipantsInFile(filename);
             std::vector<int> participantsOnFileId;
             for (const auto &participant : participantsOnFile) {
                 participantsOnFileId.push_back(participant->getId());
