@@ -172,8 +172,8 @@ std::multimap<std::string, std::string> ManagementDB::takeFiles(const std::strin
     if (db.open()) {
         QSqlQuery query;
         QString quser = QString::fromUtf8(user.data(), user.size());
-        //query.prepare("SELECT username, titolo FROM files"); //SENZA GERARCHIA
-        query.prepare("SELECT owner, titolo FROM files where username = '" + quser + "'"); //CON GERARCHIA
+        query.prepare("SELECT owner, titolo FROM files"); //SENZA GERARCHIA (scommentarne uno)
+        //query.prepare("SELECT owner, titolo FROM files where username = '" + quser + "'"); //CON GERARCHIA (scommentarne uno)
         if (query.exec()) {
             std::multimap<std::string, std::string> files;
             while (query.next()) {

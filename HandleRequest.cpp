@@ -186,8 +186,10 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                           << shared_from_this()->getUsername() << ") LOGOUT AND FREE FILE: "
                           << shared_from_this()->getCurrentFile() << std::endl;
             } else { //altri sul file
-                json j = json{{"response", "update_participants"},
-                              {"idList",   othersOnFile}};
+                std::vector<std::string> colors = Server::getInstance().getColors(othersOnFile);
+                json j = json{{"response",   "update_participants"},
+                              {"idList",     othersOnFile},
+                              {"colorsList", colors}};
                 sendAllClient(j.dump(), shared_from_this()->getId());
                 std::cout << SocketManager::output(std::this_thread::get_id()) << "CLIENT "
                           << shared_from_this()->getId()
@@ -209,8 +211,10 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                       << shared_from_this()->getUsername() << ") CLOSE AND FREE FILE: "
                       << shared_from_this()->getCurrentFile() << std::endl;
         } else { //altri sul file
-            json j = json{{"response", "update_participants"},
-                          {"idList",   othersOnFile}};
+            std::vector<std::string> colors = Server::getInstance().getColors(othersOnFile);
+            json j = json{{"response",   "update_participants"},
+                          {"idList",     othersOnFile},
+                          {"colorsList", colors}};
             sendAllClient(j.dump(), shared_from_this()->getId());
             std::cout << SocketManager::output(std::this_thread::get_id()) << "CLIENT " << shared_from_this()->getId()
                       << " ("
@@ -299,8 +303,10 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             sendAtClient(j.dump());
             //mando lista participant sul file (solo lui per ora)
             std::vector<int> participantsOnFileId(shared_from_this()->getId());
-            j = json{{"response", "update_participants"},
-                     {"idList",   participantsOnFileId}};
+            std::vector<std::string> colors = Server::getInstance().getColors(participantsOnFileId);
+            j = json{{"response",   "update_participants"},
+                     {"idList",     participantsOnFileId},
+                     {"colorsList", colors}};
             sendAtClient(j.dump());
             return j.dump();
         } else {
@@ -408,8 +414,10 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             for (const auto &participant : participantsOnFile) {
                 participantsOnFileId.push_back(participant->getId());
             }
-            json j = json{{"response", "update_participants"},
-                          {"idList",   participantsOnFileId}};
+            std::vector<std::string> colors = Server::getInstance().getColors(participantsOnFileId);
+            json j = json{{"response",   "update_participants"},
+                          {"idList",     participantsOnFileId},
+                          {"colorsList", colors}};
             sendAllClient(j.dump(), shared_from_this()->getId());
             return j.dump();
         } else {

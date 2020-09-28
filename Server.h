@@ -60,6 +60,8 @@ public:
 
     void modFile(const std::string& filename, bool force);
 
+    std::vector<std::string> getColors(const std::vector<int>& users);
+
 private:
     Server() = default;
 

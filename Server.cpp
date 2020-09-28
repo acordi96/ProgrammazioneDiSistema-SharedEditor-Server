@@ -214,3 +214,16 @@ std::vector<int> Server::closeFile(const participant_ptr &participant) {
         return othersOnFile;
     }
 }
+
+std::vector<std::string> Server::getColors(const std::vector<int>& users) {
+    std::vector<std::string> colors;
+    for(auto &participant : participants_) {
+        for(auto &user : users) {
+            if(participant->getId() == user) {
+                colors.push_back(participant->getColor());
+                break;
+            }
+        }
+    }
+    return colors;
+}
