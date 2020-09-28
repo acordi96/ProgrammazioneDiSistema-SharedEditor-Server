@@ -297,7 +297,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
             json j = json{{"response", "new_file_created"}};
             sendAtClient(j.dump());
-            //mando lista participant su quel file (solo p=lui per ora)
+            //mando lista participant sul file (solo lui per ora)
             std::vector<int> participantsOnFileId(shared_from_this()->getId());
             j = json{{"response", "update_participants"},
                      {"idList",   participantsOnFileId}};

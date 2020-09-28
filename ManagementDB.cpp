@@ -32,7 +32,12 @@ std::string ManagementDB::handleLogin(const std::string &user, const std::string
     if (db.open()) {
         QSqlQuery query;
         QString username = QString::fromUtf8(user.data(), user.size());
-        QString psw = QString::fromUtf8(password.data(), password.size());
+        query.prepare("SELECT sale FROM user_login WHERE username = '"+username+"'");
+        query.exec();
+        query.next();
+        QString sale = query.value(0).toString();
+        std::string saltedPassword = md5(password+sale.toUtf8().constData());
+        QString psw = QString::fromUtf8(saltedPassword.data(), saltedPassword.size());
         query.prepare(
                 "SELECT username, password, color FROM user_login WHERE username='" + username + "' and password='" +
                 psw + "'");
@@ -57,10 +62,8 @@ std::string ManagementDB::handleSignup(const std::string &e, const std::string &
 
     if (db.open()) {
         QSqlQuery query;
-        QString email = QString::fromUtf8(e.data(), e.size());
         QString user = QString::fromUtf8(username.data(), username.size());
-        QString password = QString::fromUtf8(psw.data(), psw.size());
-        QString color = generateRandomColor();
+        QString email = QString::fromUtf8(e.data(), e.size());
 
         if (checkMail(email) == "\"EMAIL_ERROR") {
             db.close();
@@ -71,10 +74,18 @@ std::string ManagementDB::handleSignup(const std::string &e, const std::string &
             if (query.next())
                 return "SIGNUP_ERROR_DUPLICATE_USERNAME";
             else {
+                QString color = generateRandomColor();
+                std::srand(std::time(nullptr));
+                std::string sale = std::to_string(std::rand());
+                QString qsale = QString::fromStdString(sale.erase(6));
+                std::string saltedPassword = psw + sale;
+                saltedPassword = md5(saltedPassword);
+                QString password = QString::fromStdString(saltedPassword);
                 QSqlQuery query2;
                 query2.prepare(
-                        "INSERT INTO user_login(email, username, password, color) VALUES ('" + email + "', '" + user +
-                        "', '" + password + "','" + color + "')");
+                        "INSERT INTO user_login(email, username, password, color, sale) VALUES ('" + email + "', '" +
+                        user +
+                        "', '" + password + "','" + color + "', '" + qsale + "')");
                 if (query2.exec()) {
                     db.close();
                     return color.toStdString();
