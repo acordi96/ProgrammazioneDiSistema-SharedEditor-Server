@@ -225,6 +225,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false);
 
         json j = json{{"response", "insert_res"},
+                      {"participant", shared_from_this()->getId()},
                       {"corpo",    corpo}};
         sendAllClient(j.dump(), shared_from_this()->getId());
         return j.dump();
@@ -240,6 +241,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false);
 
         json j = json{{"response", "remove_res"},
+                      {"participant", shared_from_this()->getId()},
                       {"start",    startIndex},
                       {"end",      endIndex}};
         sendAllClient(j.dump(), shared_from_this()->getId());
