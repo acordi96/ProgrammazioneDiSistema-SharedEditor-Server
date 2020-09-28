@@ -2,8 +2,8 @@
 // Created by Sam on 01/apr/2020.
 //
 
-#ifndef SERVERPDS_CONNECTION_H
-#define SERVERPDS_CONNECTION_H
+#ifndef SERVERPDS_SOCKETMANAGER_H
+#define SERVERPDS_SOCKETMANAGER_H
 
 #include <iostream>
 #include <string>
@@ -16,7 +16,7 @@
 using boost::asio::ip::tcp;
 
 //QUESTA E' LA CLASSE DI PARTENZA!
-class Connection {
+class SocketManager {
 private:
     int countId = 0;
     tcp::acceptor acceptor_;
@@ -24,10 +24,10 @@ private:
     void connection();
 
 public:
-    Connection(boost::asio::io_context &io_context, const tcp::endpoint &endpoint);
+    SocketManager(boost::asio::io_context &io_context, const tcp::endpoint &endpoint);
 
     static std::string output(std::thread::id threadId);
 };
 
 
-#endif //SERVERPDS_CONNECTION_H
+#endif //SERVERPDS_SOCKETMANAGER_H

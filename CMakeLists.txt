@@ -15,7 +15,7 @@ find_package(Boost CONFIG REQUIRED COMPONENTS random)
 find_package(Qt5Sql REQUIRED)
 
 
-add_executable(ServerPDS main.cpp Connection.cpp Connection.h HandleRequest.cpp HandleRequest.h ManagementDB.cpp ManagementDB.h Symbol.cpp Symbol.h message.cpp message.h Server.cpp Server.h Participant.cpp Participant.h MessageSymbol.cpp MessageSymbol.h)
+add_executable(ServerPDS main.cpp SocketManager.cpp SocketManager.h HandleRequest.cpp HandleRequest.h ManagementDB.cpp ManagementDB.h Symbol.cpp Symbol.h message.cpp message.h Server.cpp Server.h Participant.cpp Participant.h MessageSymbol.cpp MessageSymbol.h)
 
 #target_link_libraries(DBMSProject ${Boost_LIBRARIES})  # that didn't work
 list(APPEND LIBRARIES

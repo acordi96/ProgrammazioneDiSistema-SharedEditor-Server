@@ -1,5 +1,5 @@
 #include <iostream>
-#include "Connection.h"
+#include "SocketManager.h"
 
 #define serverPort "3000"
 
@@ -10,13 +10,13 @@ int main() {
     try {
         boost::asio::io_context io_context;
         tcp::endpoint endpoint(tcp::v4(), std::atoi(serverPort));
-        Connection server(io_context, endpoint);
-        std::cout << Connection::output(std::this_thread::get_id()) << "SERVER START, " << std::to_string(cores)
+        SocketManager server(io_context, endpoint);
+        std::cout << SocketManager::output(std::this_thread::get_id()) << "SERVER START, " << std::to_string(cores)
                   << " CORES"
                   << std::endl;
         for (int i = 0; i < cores; i++) {
             threads.emplace_back([&io_context, &i]() {
-                std::cout << Connection::output(std::this_thread::get_id())
+                std::cout << SocketManager::output(std::this_thread::get_id())
                           << "THREAD CREATED, WAITING FOR CLIENT CONNECTIONS ON PORT " << serverPort
                           << std::endl;
                 io_context.run();

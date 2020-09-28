@@ -5,7 +5,7 @@
 #include <fstream>
 #include <boost/filesystem.hpp>
 #include "Server.h"
-#include "Connection.h"
+#include "SocketManager.h"
 
 #define nModsBeforeWrite 15 //numero di m/home/jaceschrist/Documents/progettoPDS/serverPDSodifiche per modificare il file (>0)
 
@@ -184,7 +184,7 @@ void Server::modFile(const std::string &filename, bool force) {
         }
         file.write(crdtToWrite, this->symbolsPerFile.at(filename).size());
         file.close();
-        std::cout << Connection::output(std::this_thread::get_id()) << "UPDATED" << " (" << this->modsPerFile.at(filename) << " MODS)"
+        std::cout << SocketManager::output(std::this_thread::get_id()) << "UPDATED" << " (" << this->modsPerFile.at(filename) << " MODS)"
                   << " LOCAL FILE: " << filename << std::endl;
         this->modsPerFile.at(filename) = 0;
     }

@@ -15,7 +15,7 @@
 #include <boost/thread.hpp>
 
 
-#include "Connection.h"
+#include "SocketManager.h"
 #include "Server.h"
 #include "Participant.h"
 #include "lib/json.hpp"

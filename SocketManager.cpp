@@ -3,14 +3,14 @@
 //
 
 #include <thread_db.h>
-#include "Connection.h"
+#include "SocketManager.h"
 
-Connection::Connection(boost::asio::io_context &io_context, const tcp::endpoint &endpoint) : acceptor_(io_context,
-                                                                                                       endpoint) {
+SocketManager::SocketManager(boost::asio::io_context &io_context, const tcp::endpoint &endpoint) : acceptor_(io_context,
+                                                                                                             endpoint) {
     connection();
 }
 
-void Connection::connection() {
+void SocketManager::connection() {
     acceptor_.async_accept([this](boost::system::error_code ec, tcp::socket socket) {
         if (ec) {
             //non si riesce a connettere al server per vari motivi
@@ -19,7 +19,7 @@ void Connection::connection() {
         } else {
             //LEGGO LA RICHIESTA E LA PROCESSO
             countId++;
-            std::cout << Connection::output(std::this_thread::get_id()) << "CONNECTED TO NEW CLIENT: " << countId
+            std::cout << SocketManager::output(std::this_thread::get_id()) << "CONNECTED TO NEW CLIENT: " << countId
                       << std::endl;
             std::make_shared<HandleRequest>(std::move(socket))->start(countId);
         }
@@ -27,7 +27,7 @@ void Connection::connection() {
     });
 }
 
-std::string Connection::output(std::thread::id threadId) {
+std::string SocketManager::output(std::thread::id threadId) {
     auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     std::string time = std::ctime(&now);
     std::stringstream ss;
