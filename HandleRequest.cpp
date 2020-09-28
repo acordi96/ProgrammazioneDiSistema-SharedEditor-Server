@@ -122,7 +122,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         std::string username, password;
         username = js.at("username").get<std::string>();
         password = js.at("password").get<std::string>();
-        QString colorParticiapant = "#00ffffff";
+        QString colorParticiapant = "#00ffffff"; //TODO: deve restituire il colore
         std::string resDB = manDB.handleLogin(username, password, colorParticiapant);
         //al log in voglio avere lista di tutti i file nel db con relativo autore
         std::multimap<std::string, std::string> risultato;
@@ -153,30 +153,35 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         username = js.at("username").get<std::string>();
         password = js.at("password").get<std::string>();
         email = js.at("email").get<std::string>();
-        QString colorParticiapant = "#00ffffff";
-        std::string resDB = manDB.handleSignup(email, username, password);
+        std::string colorParticiapant = manDB.handleSignup(email, username, password);
 
         //se la registrazione va bene, creo la cartella personale per il nuovo utente
-        if (resDB == "SIGNUP_SUCCESS") {
+        if (colorParticiapant != "SIGNUP_ERROR_INSERT_FAILED" && colorParticiapant != "CONNESSION_ERROR") {
             std::cout << SocketManager::output(std::this_thread::get_id()) << "CLIENT " << this->getId() << " ("
                       << username
-                      << ") SIGNUP SUCCESS " << std::endl;
+                      << ") SIGNUP SUCCESS, COLOR GENERATED: " << colorParticiapant << std::endl;
             std::string path = boost::filesystem::current_path().string();
             path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
             path += "/files/" + js.at("username").get<std::string>();
             boost::filesystem::create_directory(path);
             shared_from_this()->setUsername(username);
-        }
-        json j = json{{"response",  resDB},
-                      {"username",  username},
-                      {"colorUser", colorParticiapant.toStdString()}};
-        sendAtClient(j.dump());
-        return j.dump();
+            json j = json{{"response",  "SIGNUP_SUCCESS"},
+                          {"username",  username},
+                          {"colorUser", colorParticiapant}};
+            sendAtClient(j.dump());
+            return j.dump();
+        } else {
+            json j = json{{"response", "SIGNUP_ERROR"},
+                          {"username", username},};
+            sendAtClient(j.dump());
+            return j.dump();
+        };
     } else if (type_request == "req_logout") {
         if (!shared_from_this()->getCurrentFile().empty()) {
             std::vector<int> othersOnFile = Server::getInstance().closeFile(shared_from_this());
             if (othersOnFile.empty()) { //nessun altro sul file
-                std::cout << SocketManager::output(std::this_thread::get_id()) << "CLIENT " << shared_from_this()->getId()
+                std::cout << SocketManager::output(std::this_thread::get_id()) << "CLIENT "
+                          << shared_from_this()->getId()
                           << " ("
                           << shared_from_this()->getUsername() << ") LOGOUT AND FREE FILE: "
                           << shared_from_this()->getCurrentFile() << std::endl;
@@ -184,7 +189,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 json j = json{{"response", "update_participants"},
                               {"idList",   othersOnFile}};
                 sendAllClient(j.dump(), shared_from_this()->getId());
-                std::cout << SocketManager::output(std::this_thread::get_id()) << "CLIENT " << shared_from_this()->getId()
+                std::cout << SocketManager::output(std::this_thread::get_id()) << "CLIENT "
+                          << shared_from_this()->getId()
                           << " ("
                           << shared_from_this()->getUsername() << ") LOGOUT, STILL OPENED FILE: "
                           << shared_from_this()->getCurrentFile() << std::endl;
@@ -224,9 +230,9 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         //salvataggio su file
         Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false);
 
-        json j = json{{"response", "insert_res"},
+        json j = json{{"response",    "insert_res"},
                       {"participant", shared_from_this()->getId()},
-                      {"corpo",    corpo}};
+                      {"corpo",       corpo}};
         sendAllClient(j.dump(), shared_from_this()->getId());
         return j.dump();
 
@@ -240,10 +246,10 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         //salvataggio su file
         Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false);
 
-        json j = json{{"response", "remove_res"},
+        json j = json{{"response",    "remove_res"},
                       {"participant", shared_from_this()->getId()},
-                      {"start",    startIndex},
-                      {"end",      endIndex}};
+                      {"start",       startIndex},
+                      {"end",         endIndex}};
         sendAllClient(j.dump(), shared_from_this()->getId());
         return j.dump();
     } else if (type_request == "request_new_file") {
@@ -305,7 +311,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
         std::string resDB = manDB.handleOpenFile(js.at("username").get<std::string>(),
                                                  js.at("name").get<std::string>());
-        if (/*resDB == "FILE_OPEN_SUCCESS"*/ true) { //TODO: da problemi nella seconda apertura file
+        if (resDB == "FILE_OPEN_SUCCESS") {
             std::string path = boost::filesystem::current_path().string();
             path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
             path += "/files/" + js.at("username").get<std::string>();
@@ -405,9 +411,46 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             json j = json{{"response", "update_participants"},
                           {"idList",   participantsOnFileId}};
             sendAllClient(j.dump(), shared_from_this()->getId());
-            return "";
+            return j.dump();
         } else {
             json j = json{{"response", "errore_apertura_file"}};
+            return j.dump();
+        }
+    } else if (type_request == "get_invitation") {
+        /*json{     {"operation", "get_invitation"},
+                    {"owner", owner},
+                    {"filename", filename};*/
+        if (shared_from_this()->getUsername() != js.at("owner")) { //solo il proprietario puo' richiederlo
+            json j = json{{"response", "error_get_invitation"}};
+            sendAtClient(j.dump());
+            return j.dump();
+        }
+        std::string invitationCode = manDB.getInvitation(shared_from_this()->getUsername(), js.at("owner"),
+                                                         js.at("filename"));
+        if (invitationCode != "QUERY_REFUSED" && invitationCode != "CONNESSION_ERROR_") {
+            json j = json{{"response",        "invitation_generated"},
+                          {"invitation_code", invitationCode}};
+            sendAtClient(j.dump());
+            return j.dump();
+        } else {
+            json j = json{{"response", "error_get_invitation"}};
+            sendAtClient(j.dump());
+            return j.dump();
+        }
+    } else if (type_request == "validate_invitation") {
+        /*json{     {"operation", "validate_invitation"},
+                    {"owner", owner},
+                    {"filename", filename}
+                    {"invitation_code", invitation_code}};*/
+        std::string resp = manDB.validateInvitation(shared_from_this()->getUsername(), js.at("owner"),
+                                                    js.at("filename"), js.at("invitation_code"));
+        if (resp == "INVITATION_SUCCESS") {
+            json j = json{{"response", "invitation_success"}};
+            sendAtClient(j.dump());
+            return j.dump(); //TODO: client refresh file list
+        } else {
+            json j = json{{"response", "invitation_error"}};
+            sendAtClient(j.dump());
             return j.dump();
         }
     } else if (type_request == "request_new_name") {
@@ -429,8 +472,6 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             json j = json{{"response", "errore_rinomina_file"}};
             return j.dump();
         }
-
-
     } else {
         std::cout << "nessun match col tipo di richiesta" << std::endl;
         json j = json{{"response", "general_error"}};

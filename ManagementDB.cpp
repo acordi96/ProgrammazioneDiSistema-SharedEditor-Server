@@ -20,8 +20,10 @@ QString ManagementDB::generateRandomColor() {
     std::string hex = "abcdef0123456789";
     int n = hex.length();
     std::string color = "#88"; //alpha will be fixed to 88
-    for (int i = 1; i <= 6; i++)
-        color.push_back(hex[rand() % n]);
+    for (int i = 1; i <= 6; i++) {
+        std::srand(std::time(nullptr));
+        color.push_back(hex[std::rand() % n]);
+    }
     return (QString::fromUtf8(color.data(), color.size()));
 }
 
@@ -75,7 +77,7 @@ std::string ManagementDB::handleSignup(const std::string &e, const std::string &
                         "', '" + password + "','" + color + "')");
                 if (query2.exec()) {
                     db.close();
-                    return "SIGNUP_SUCCESS";
+                    return color.toStdString();
                 } else {
                     db.close();
                     return "SIGNUP_ERROR_INSERT_FAILED";
@@ -110,17 +112,18 @@ std::string ManagementDB::handleOpenFile(const std::string &user, const std::str
         QSqlQuery query;
         QString id = QString::fromUtf8(user.data(), user.size());
         QString title = QString::fromUtf8(file.data(), file.size());
-        query.prepare("SELECT EXISTS(SELECT * FROM files WHERE username = '" + id + "' AND titolo = '" + title +
-                      "')"); //per ora inutile
+        query.prepare("SELECT COUNT(1) FROM files WHERE username = '" + id + "' AND titolo = '" + title +
+                      "'");
         if (query.exec()) {
-            db.close();
-            return "FILE_OPEN_SUCCESS";
-        } else {
-            db.close();
-            std::cout << "\n apertura fallita\n";
-            return "FILE_OPEN_FAILED";
+            query.next();
+            if (query.value(0) == 1) {
+                db.close();
+                return "FILE_OPEN_SUCCESS";
+            }
         }
-
+        db.close();
+        std::cout << "apertura fallita" << std::endl;
+        return "FILE_OPEN_FAILED";
     } else
         return "CONNESSION_ERROR_";
 }
@@ -132,7 +135,13 @@ std::string ManagementDB::handleNewFile(const std::string &user, const std::stri
         QSqlQuery query;
         QString id = QString::fromUtf8(user.data(), user.size());
         QString title = QString::fromUtf8(file.data(), file.size());
-        query.prepare("INSERT INTO files(username,titolo) VALUES ('" + id + "','" + title + "')");
+        std::srand(std::time(nullptr));
+        std::string invitation = user + file + std::to_string(std::rand());
+        invitation = md5(invitation);
+        invitation.erase(12);
+        QString qinvitation = QString::fromUtf8(invitation.data(), invitation.size());
+        query.prepare("INSERT INTO files(username,titolo,invitation,owner) VALUES ('" + id + "','" + title + "','" +
+                      qinvitation + "','" + id + "')");
 
         if (query.exec()) {
             db.close();
@@ -151,14 +160,12 @@ std::multimap<std::string, std::string> ManagementDB::takeFiles(const std::strin
     QSqlDatabase db = connect();
     if (db.open()) {
         QSqlQuery query;
-        QString id = QString::fromUtf8(user.data(), user.size());
-        //query.prepare("SELECT titolo FROM files WHERE username = '"+id+"'");
-        query.prepare("SELECT username, titolo FROM files");
+        QString quser = QString::fromUtf8(user.data(), user.size());
+        //query.prepare("SELECT username, titolo FROM files"); //SENZA GERARCHIA
+        query.prepare("SELECT owner, titolo FROM files where username = '" + quser + "'"); //CON GERARCHIA
         if (query.exec()) {
-            //std::list<std::string> files;
             std::multimap<std::string, std::string> files;
             while (query.next()) {
-                //QString title = query.value(0).toString();
                 QString username = query.value(0).toString();
                 QString title = query.value(1).toString();
                 std::string utente = username.toStdString();
@@ -168,10 +175,8 @@ std::multimap<std::string, std::string> ManagementDB::takeFiles(const std::strin
             db.close();
             return files;
         }
-
     }
     return std::multimap<std::string, std::string>();
-    //return std::list<std::string>();
 }
 
 std::string
@@ -199,4 +204,61 @@ ManagementDB::handleRenameFile(const std::string &user, const std::string &oldNa
 
     } else
         return "CONNESSION_ERROR_";
+}
+
+std::string ManagementDB::getInvitation(const std::string &user, const std::string &owner, const std::string &file) {
+    QSqlDatabase db = connect();
+
+    if (db.open()) {
+        QSqlQuery query;
+        QString quser = QString::fromUtf8(user.data(), user.size());
+        QString qowner = QString::fromUtf8(owner.data(), file.size());
+        QString qfile = QString::fromUtf8(file.data(), file.size());
+        query.prepare(
+                "SELECT invitation FROM files WHERE username = '" + quser + "' AND titolo = '" + qfile +
+                "' AND owner = '" + qowner + "'");
+        if (query.exec()) {
+            db.close();
+            return query.value(0).toString().toStdString();
+        } else {
+            db.close();
+            return "QUERY_REFUSED";
+        }
+
+    } else
+        return "CONNESSION_ERROR_";
+}
+
+std::string ManagementDB::validateInvitation(const std::string &user, const std::string &owner, const std::string &file,
+                                             const std::string &code) {
+    QSqlDatabase db = connect();
+    if (db.open()) {
+        QSqlQuery query;
+        QString quser = QString::fromUtf8(user.data(), user.size());
+        QString qowner = QString::fromUtf8(owner.data(), owner.size());
+        QString qfile = QString::fromUtf8(file.data(), file.size());
+        QString qcode = QString::fromUtf8(code.data(), code.size());
+
+        query.prepare(
+                "SELECT COUNT(1) FROM files WHERE owner ='" + qowner + "' and titolo ='" +
+                qfile + "' AND invitation = '" + qcode + "'");
+        if (query.exec()) {
+            query.next();
+            if (query.value(0) == 1) {
+                query.prepare(
+                        "INSERT INTO files (username, titolo, invitation, owner) VALUES ('" + quser + "', '" + qfile +
+                        "', '/', " + qowner + "')");
+                if (!query.exec())
+                    response = "INVITATION_ERROR";
+                response = "INVITATION_SUCCESS";
+            } else
+                response = "INVITATION_ERROR";
+        } else {
+            response = "QUERY_ERROR";
+        }
+        db.close();
+        return response;
+    } else {
+        return "CONNESSION_ERROR";
+    }
 }

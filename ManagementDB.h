@@ -11,6 +11,7 @@
 #include <string>
 #include <iostream>
 #include <QString>
+#include "lib/md5.h"
 
 class ManagementDB {
 private:
@@ -26,6 +27,8 @@ public:
     std::multimap<std::string,std::string> takeFiles(const std::string& user);
     std::string handleOpenFile(const std::string& user, const std::string& file);
     std::string handleRenameFile(const std::string& user, const std::string& oldName, const std::string& newName);
+    std::string getInvitation(const std::string& user, const std::string& owner, const std::string& file);
+    std::string validateInvitation(const std::string& user, const std::string& owner, const std::string& file, const std::string& code);
 };
 
 
