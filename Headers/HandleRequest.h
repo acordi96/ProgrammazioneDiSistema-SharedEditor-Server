@@ -10,7 +10,7 @@
 #include <set>
 #include <QtCore/QRegExp>
 #include "ManagementDB.h"
-#include "message.h"
+#include "Message.h"
 
 #include <boost/thread.hpp>
 
@@ -27,7 +27,7 @@ class HandleRequest : public Participant, public std::enable_shared_from_this<Ha
 private:
     //attributi per far funzionare tutto
     tcp::socket socket;
-    message read_msg_;
+    Message read_msg_;
     message_queue write_msgs_;
 
     //metodi
@@ -48,7 +48,7 @@ public:
 
     explicit HandleRequest(tcp::socket socket);
 
-    void deliver(const message &msg);
+    void deliver(const Message &msg);
 };
 
 

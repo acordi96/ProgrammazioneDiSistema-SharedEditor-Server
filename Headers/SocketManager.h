@@ -15,7 +15,6 @@
 
 using boost::asio::ip::tcp;
 
-//QUESTA E' LA CLASSE DI PARTENZA!
 class SocketManager {
 private:
     int countId = 0;

@@ -5,7 +5,7 @@
 #ifndef SERVERPDS_PARTICIPANT_H
 #define SERVERPDS_PARTICIPANT_H
 
-#include "message.h"
+#include "Message.h"
 #include "MessageSymbol.h"
 
 class Participant {
@@ -18,7 +18,7 @@ private:
 public:
     virtual ~Participant() = default;
 
-    virtual void deliver(const message &msg) = 0;
+    virtual void deliver(const Message &msg) = 0;
 
     //metodi set
     void setUsername(std::string userName);

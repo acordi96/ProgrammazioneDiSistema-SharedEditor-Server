@@ -18,7 +18,7 @@ void SocketManager::connection() {
         } else {
             //LEGGO LA RICHIESTA E LA PROCESSO
             countId++;
-            std::cout << SocketManager::output() << "CONNECTED TO NEW CLIENT: " << countId
+            std::cout << SocketManager::output() << "NEW CLIENT CONNECTION ESTABLISHED, ID: " << countId
                       << std::endl;
             std::make_shared<HandleRequest>(std::move(socket))->start(countId);
         }

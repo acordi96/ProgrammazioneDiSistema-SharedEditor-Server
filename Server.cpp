@@ -30,7 +30,7 @@ void Server::leave(const participant_ptr &participant) {
     participants_.erase(participant);
 }
 
-void Server::deliver(const message &msg) {
+void Server::deliver(const Message &msg) {
     recent_msgs_.push_back(msg);
     while (recent_msgs_.size() > max_recent_msgs)
         recent_msgs_.pop_front();
@@ -39,7 +39,7 @@ void Server::deliver(const message &msg) {
         p->deliver(msg);
 }
 
-void Server::deliverToAllOnFile(const message &msg, const participant_ptr& participant) {
+void Server::deliverToAllOnFile(const Message &msg, const participant_ptr& participant) {
     recent_msgs_.push_back(msg);
 
     while (recent_msgs_.size() > max_recent_msgs)

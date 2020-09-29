@@ -13,7 +13,7 @@
 #include "Participant.h"
 #include <map>
 
-typedef std::deque<message> message_queue;
+typedef std::deque<Message> message_queue;
 typedef std::queue<MessageSymbol> msgInfo_queue;
 typedef std::shared_ptr<Participant> participant_ptr;
 
@@ -30,9 +30,9 @@ public:
 
     void leave(const participant_ptr &participant);
 
-    void deliver(const message &msg);
+    void deliver(const Message &msg);
 
-    void deliverToAllOnFile(const message &msg, const participant_ptr &participant);
+    void deliverToAllOnFile(const Message &msg, const participant_ptr &participant);
 
     void send(const MessageSymbol &m);
 
@@ -75,6 +75,7 @@ private:
     };
     message_queue recent_msgs_;
     msgInfo_queue infoMsgs_;
+
     std::map<std::string, std::vector<Symbol>> symbolsPerFile;
     std::map<std::string, std::vector<participant_ptr>> participantsPerFile;
     std::map<std::string, int> modsPerFile;

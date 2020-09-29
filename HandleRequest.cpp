@@ -26,7 +26,7 @@ void HandleRequest::start(int participantId) {
 void HandleRequest::do_read_header() {
     auto self(shared_from_this());
     memset(read_msg_.data(), 0, read_msg_.length());
-    boost::asio::async_read(socket, boost::asio::buffer(read_msg_.data(), message::header_length),
+    boost::asio::async_read(socket, boost::asio::buffer(read_msg_.data(), Message::header_length),
                             [this, self](boost::system::error_code ec, std::size_t /*length*/) {
                                 if (!ec && read_msg_.decode_header()) {
                                     do_read_body();
@@ -72,7 +72,7 @@ void HandleRequest::do_read_body() {
 
 void HandleRequest::sendAtClient(const std::string &j_string) {
     std::size_t len = j_string.size();
-    message msg;
+    Message msg;
     msg.body_length(len);
     std::memcpy(msg.body(), j_string.data(), msg.body_length());
     msg.body()[msg.body_length()] = '\0';
@@ -86,7 +86,7 @@ void HandleRequest::sendAtClient(const std::string &j_string) {
 
 void HandleRequest::sendAllClient(const std::string &j_string, const int &id) {
     std::size_t len = j_string.size();
-    message msg;
+    Message msg;
     msg.body_length(len);
     std::memcpy(msg.body(), j_string.data(), msg.body_length());
     msg.body()[msg.body_length()] = '\0';
@@ -518,7 +518,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
     }
 }
 
-void HandleRequest::deliver(const message &msg) {
+void HandleRequest::deliver(const Message &msg) {
     bool write_in_progress = !write_msgs_.empty();
     //aggiungo un nuovo elemento alla fine della coda
     write_msgs_.push_back(msg);
