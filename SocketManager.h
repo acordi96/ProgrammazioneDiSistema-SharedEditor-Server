@@ -26,7 +26,7 @@ private:
 public:
     SocketManager(boost::asio::io_context &io_context, const tcp::endpoint &endpoint);
 
-    static std::string output(std::thread::id threadId);
+    static std::string output();
 };
 
 

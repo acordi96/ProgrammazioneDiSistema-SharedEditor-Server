@@ -184,7 +184,7 @@ void Server::modFile(const std::string &filename, bool force) {
         }
         file.write(crdtToWrite, this->symbolsPerFile.at(filename).size());
         file.close();
-        std::cout << SocketManager::output(std::this_thread::get_id()) << "UPDATED" << " (" << this->modsPerFile.at(filename) << " MODS)"
+        std::cout << SocketManager::output() << "UPDATED" << " (" << this->modsPerFile.at(filename) << " MODS)"
                   << " LOCAL FILE: " << filename << std::endl;
         this->modsPerFile.at(filename) = 0;
     }

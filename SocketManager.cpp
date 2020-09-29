@@ -18,7 +18,7 @@ void SocketManager::connection() {
         } else {
             //LEGGO LA RICHIESTA E LA PROCESSO
             countId++;
-            std::cout << SocketManager::output(std::this_thread::get_id()) << "CONNECTED TO NEW CLIENT: " << countId
+            std::cout << SocketManager::output() << "CONNECTED TO NEW CLIENT: " << countId
                       << std::endl;
             std::make_shared<HandleRequest>(std::move(socket))->start(countId);
         }
@@ -26,10 +26,8 @@ void SocketManager::connection() {
     });
 }
 
-std::string SocketManager::output(std::thread::id threadId) {
+std::string SocketManager::output() {
     auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     std::string time = std::ctime(&now);
-    std::stringstream ss;
-    ss << threadId;
-    return "{" + ss.str() + "} [" + time.erase(time.length() - 1) + "] - ";
+    return "[" + time.erase(time.length() - 1) + "] - ";
 }
