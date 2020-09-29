@@ -62,6 +62,8 @@ public:
 
     std::vector<std::string> getColors(const std::vector<int>& users);
 
+    std::vector<std::string> getUsernames(const std::vector<int>& users);
+
 private:
     Server() = default;
 

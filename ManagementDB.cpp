@@ -17,13 +17,15 @@ QSqlDatabase ManagementDB::connect() { //TODO: database and multithreading
 }
 
 QString ManagementDB::generateRandomColor() {
-    std::string hex = "abcdef0123456789";
-    int n = hex.length();
-    std::string color = "#88"; //alpha will be fixed to 88
-    for (int i = 1; i <= 6; i++) {
-        std::srand(std::time(nullptr));
-        color.push_back(hex[std::rand() % n]);
-    }
+    std::string color = "#";
+    static const char alphanum[] =
+            "0123456789"
+            "ABCDEF"
+            "abcdef";
+
+    std::srand((unsigned) time(NULL)/* * getpid()*/);
+    for (int i = 0; i < 6; ++i)
+        color += alphanum[rand() % (sizeof(alphanum) - 1)];
     return (QString::fromUtf8(color.data(), color.size()));
 }
 
@@ -120,15 +122,16 @@ std::string ManagementDB::checkMail(const QString &mail) {
     return "EMAIL_OK";
 }
 
-std::string ManagementDB::handleOpenFile(const std::string &user, const std::string &file) {
+std::string ManagementDB::handleOpenFile(const std::string& owner, const std::string &user, const std::string &file) {
     QSqlDatabase db = connect();
 
     if (db.open()) {
         QSqlQuery query;
         QString id = QString::fromUtf8(user.data(), user.size());
         QString title = QString::fromUtf8(file.data(), file.size());
+        QString qowner = QString::fromUtf8(owner.data(), owner.size());
         query.prepare("SELECT COUNT(1) FROM files WHERE username = '" + id + "' AND titolo = '" + title +
-                      "'");
+                      "' AND owner = '" + qowner + "'");
         if (query.exec()) {
             query.next();
             if (query.value(0) == 1) {

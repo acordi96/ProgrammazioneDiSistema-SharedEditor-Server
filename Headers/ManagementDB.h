@@ -25,7 +25,7 @@ public:
     std::string handleSignup(const std::string& email,const std::string& user,const std::string& password);
     std::string handleNewFile(const std::string& user, const std::string& file );
     std::multimap<std::string,std::string> takeFiles(const std::string& user);
-    std::string handleOpenFile(const std::string& user, const std::string& file);
+    std::string handleOpenFile(const std::string& owner, const std::string& user, const std::string& file);
     std::string handleRenameFile(const std::string& user, const std::string& oldName, const std::string& newName);
     std::string getInvitation(const std::string& user, const std::string& owner, const std::string& file);
     std::string validateInvitation(const std::string& user, const std::string& owner, const std::string& file, const std::string& code);

@@ -227,3 +227,16 @@ std::vector<std::string> Server::getColors(const std::vector<int>& users) {
     }
     return colors;
 }
+
+std::vector<std::string> Server::getUsernames(const std::vector<int> &users) {
+    std::vector<std::string> usernames;
+    for(auto &participant : participants_) {
+        for(auto &user : users) {
+            if(participant->getId() == user) {
+                usernames.push_back(participant->getUsername());
+                break;
+            }
+        }
+    }
+    return usernames;
+}

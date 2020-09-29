@@ -7,7 +7,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/random.hpp>
 #include <boost/random/random_device.hpp>
-
+#include <QtGui/QImage>
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "InfiniteRecursion"
@@ -187,9 +187,12 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                           << shared_from_this()->getCurrentFile() << std::endl;
             } else { //altri sul file
                 std::vector<std::string> colors = Server::getInstance().getColors(othersOnFile);
+                std::vector<std::string> usernames = Server::getInstance().getUsernames(othersOnFile);
                 json j = json{{"response",   "update_participants"},
                               {"idList",     othersOnFile},
-                              {"colorsList", colors}};
+                              {"usernames",  usernames},
+                              {"colorsList", colors},
+                              {"usernames",  usernames}};
                 sendAllClient(j.dump(), shared_from_this()->getId());
                 std::cout << SocketManager::output() << "CLIENT "
                           << shared_from_this()->getId()
@@ -212,7 +215,9 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                       << shared_from_this()->getCurrentFile() << std::endl;
         } else { //altri sul file
             std::vector<std::string> colors = Server::getInstance().getColors(othersOnFile);
+            std::vector<std::string> usernames = Server::getInstance().getUsernames(othersOnFile);
             json j = json{{"response",   "update_participants"},
+                          {"usernames",  usernames},
                           {"idList",     othersOnFile},
                           {"colorsList", colors}};
             sendAllClient(j.dump(), shared_from_this()->getId());
@@ -304,8 +309,10 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             //mando lista participant sul file (solo lui per ora)
             std::vector<int> participantsOnFileId(shared_from_this()->getId());
             std::vector<std::string> colors = Server::getInstance().getColors(participantsOnFileId);
+            std::vector<std::string> usernames = Server::getInstance().getUsernames(participantsOnFileId);
             j = json{{"response",   "update_participants"},
                      {"idList",     participantsOnFileId},
+                     {"usernames",  usernames},
                      {"colorsList", colors}};
             sendAtClient(j.dump());
             return j.dump();
@@ -316,6 +323,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
     } else if (type_request == "open_file") {
 
         std::string resDB = manDB.handleOpenFile(js.at("username").get<std::string>(),
+                                                 shared_from_this()->getUsername(),
                                                  js.at("name").get<std::string>());
         if (resDB == "FILE_OPEN_SUCCESS") {
             std::string path = boost::filesystem::current_path().string();
@@ -415,8 +423,10 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 participantsOnFileId.push_back(participant->getId());
             }
             std::vector<std::string> colors = Server::getInstance().getColors(participantsOnFileId);
+            std::vector<std::string> usernames = Server::getInstance().getUsernames(participantsOnFileId);
             json j = json{{"response",   "update_participants"},
                           {"idList",     participantsOnFileId},
+                          {"usernames",  usernames},
                           {"colorsList", colors}};
             sendAllClient(j.dump(), shared_from_this()->getId());
             return j.dump();
@@ -461,6 +471,18 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             sendAtClient(j.dump());
             return j.dump();
         }
+    } else if (type_request == "send-icon") {
+        std::string path = boost::filesystem::current_path().string();
+        path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
+        path += "/Images/" + js.at("username").get<std::string>() + ".png";
+        std::string imageString = js.at("icon");
+        QByteArray byteArray(imageString.c_str(), imageString.length());
+        /*QImage image; //TODO: not compiling
+        image.loadFromData(byteArray, "PNG");
+        image.save(QString::fromStdString(path), "PNG");*/
+        json j = json{{"response", "icon-saved-successfully"}};
+        sendAtClient(j.dump());
+        return j.dump();
     } else if (type_request == "request_new_name") {
         //vado a cambiare nome file nel DB
         //bisognerebbe anche gestire la concorrenza, altri utenti potrebbero aver il file
