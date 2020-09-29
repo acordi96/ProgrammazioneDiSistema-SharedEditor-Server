@@ -122,7 +122,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         std::string username, password;
         username = js.at("username").get<std::string>();
         password = js.at("password").get<std::string>();
-        QString colorParticiapant = "#00ffffff"; //TODO: deve restituire il colore
+        QString colorParticiapant = "#00ffffff";
         std::string resDB = manDB.handleLogin(username, password, colorParticiapant);
         //al log in voglio avere lista di tutti i file nel db con relativo autore
         std::multimap<std::string, std::string> risultato;
@@ -140,11 +140,15 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 fileWithUser.push_back(string);
             }
             fileWithUser.sort();
+            json j = json{{"response",  resDB},
+                          {"username",  username},
+                          {"colorUser", colorParticiapant.toStdString()},
+                          {"files",     fileWithUser}};
+            sendAtClient(j.dump());
+            return j.dump();
         }
-        json j = json{{"response",  resDB},
-                      {"username",  username},
-                      {"colorUser", colorParticiapant.toStdString()},
-                      {"files",     fileWithUser}};
+        json j = json{{"response", resDB},
+                      {"username", username}};
         sendAtClient(j.dump());
         return j.dump();
     } else if (type_request == "request_signup") {
@@ -193,6 +197,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                               {"usernames",  usernames},
                               {"colorsList", colors},
                               {"usernames",  usernames}};
+                sendAtClient(j.dump());
                 sendAllClient(j.dump(), shared_from_this()->getId());
                 std::cout << SocketManager::output() << "CLIENT "
                           << shared_from_this()->getId()
@@ -220,6 +225,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                           {"usernames",  usernames},
                           {"idList",     othersOnFile},
                           {"colorsList", colors}};
+            sendAtClient(j.dump());
             sendAllClient(j.dump(), shared_from_this()->getId());
             std::cout << SocketManager::output() << "CLIENT " << shared_from_this()->getId()
                       << " ("
@@ -314,6 +320,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                      {"idList",     participantsOnFileId},
                      {"usernames",  usernames},
                      {"colorsList", colors}};
+            sendAtClient(j.dump());
             sendAtClient(j.dump());
             return j.dump();
         } else {
@@ -428,10 +435,12 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                           {"idList",     participantsOnFileId},
                           {"usernames",  usernames},
                           {"colorsList", colors}};
+            sendAtClient(j.dump());
             sendAllClient(j.dump(), shared_from_this()->getId());
             return j.dump();
         } else {
             json j = json{{"response", "errore_apertura_file"}};
+            sendAtClient(j.dump());
             return j.dump();
         }
     } else if (type_request == "get_invitation") {

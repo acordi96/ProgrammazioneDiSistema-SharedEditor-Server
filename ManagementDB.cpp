@@ -5,7 +5,7 @@
 #include "Headers/ManagementDB.h"
 
 QSqlDatabase ManagementDB::connect() { //TODO: database and multithreading
-    if (this->database.databaseName() == "login") {
+    if (this->database.databaseName() == "login" && this->database.isValid()) {
         return this->database;
     }
     this->database = QSqlDatabase::addDatabase("QMYSQL");
@@ -36,28 +36,25 @@ std::string ManagementDB::handleLogin(const std::string &user, const std::string
         QString username = QString::fromUtf8(user.data(), user.size());
         query.prepare("SELECT sale FROM user_login WHERE username = '" + username + "'");
         if (query.exec()) {
-            query.first();
-            QString sale = query.value(0).toString();
-            std::string saltedPassword = md5(password + sale.toUtf8().constData());
-            QString psw = QString::fromUtf8(saltedPassword.data(), saltedPassword.size());
-            query.prepare(
-                    "SELECT username, password, color FROM user_login WHERE username='" + username +
-                    "' and password='" +
-                    psw + "'");
-            if (query.exec()) {
-                if (query.next()) {
-                    color = query.value(2).toString();
-                    response = "LOGIN_SUCCESS";
-                } else
-                    response = "LOGIN_ERROR";
-            } else {
-                response = "QUERY_ERROR";
+            if (query.next()) {
+                QString sale = query.value(0).toString();
+                std::string saltedPassword = md5(password + sale.toUtf8().constData());
+                QString psw = QString::fromUtf8(saltedPassword.data(), saltedPassword.size());
+                query.prepare(
+                        "SELECT username, password, color FROM user_login WHERE username='" + username +
+                        "' and password='" +
+                        psw + "'");
+                if (query.exec()) {
+                    if (query.next()) {
+                        color = query.value(2).toString();
+                        db.close();
+                        return "LOGIN_SUCCESS";
+                    }
+                }
             }
-            db.close();
-            return response;
-        } else {
-            response = "QUERY_ERROR";
         }
+        db.close();
+        return "LOGIN_ERROR";
     } else {
         return "CONNESSION_ERROR";
     }
@@ -89,7 +86,8 @@ std::string ManagementDB::handleSignup(const std::string &e, const std::string &
                 QString password = QString::fromStdString(saltedPassword);
                 QSqlQuery query2;
                 query2.prepare(
-                        "INSERT INTO user_login(email, username, password, color, sale) VALUES ('" + email + "', '" +
+                        "INSERT INTO user_login(email, username, password, color, sale) VALUES ('" + email +
+                        "', '" +
                         user +
                         "', '" + password + "','" + color + "', '" + qsale + "')");
                 if (query2.exec()) {
@@ -122,9 +120,9 @@ std::string ManagementDB::checkMail(const QString &mail) {
     return "EMAIL_OK";
 }
 
-std::string ManagementDB::handleOpenFile(const std::string& owner, const std::string &user, const std::string &file) {
+std::string
+ManagementDB::handleOpenFile(const std::string &owner, const std::string &user, const std::string &file) {
     QSqlDatabase db = connect();
-
     if (db.open()) {
         QSqlQuery query;
         QString id = QString::fromUtf8(user.data(), user.size());
@@ -133,14 +131,14 @@ std::string ManagementDB::handleOpenFile(const std::string& owner, const std::st
         query.prepare("SELECT COUNT(1) FROM files WHERE username = '" + id + "' AND titolo = '" + title +
                       "' AND owner = '" + qowner + "'");
         if (query.exec()) {
-            query.next();
-            if (query.value(0) == 1) {
-                db.close();
-                return "FILE_OPEN_SUCCESS";
+            if (query.next()) {
+                if (query.value(0) == 1) {
+                    db.close();
+                    return "FILE_OPEN_SUCCESS";
+                }
             }
         }
         db.close();
-        std::cout << "apertura fallita" << std::endl;
         return "FILE_OPEN_FAILED";
     } else
         return "CONNESSION_ERROR_";
@@ -173,7 +171,6 @@ std::string ManagementDB::handleNewFile(const std::string &user, const std::stri
         return "CONNESSION_ERROR_";
 }
 
-/*std::list<std::string>*/
 std::multimap<std::string, std::string> ManagementDB::takeFiles(const std::string &user) {
     QSqlDatabase db = connect();
     if (db.open()) {
@@ -181,7 +178,8 @@ std::multimap<std::string, std::string> ManagementDB::takeFiles(const std::strin
         QString quser = QString::fromUtf8(user.data(), user.size());
         //query.prepare("SELECT owner, titolo FROM files"); //SENZA GERARCHIA (scommentarne uno)
         query.prepare(
-                "SELECT owner, titolo FROM files where username = '" + quser + "'"); //CON GERARCHIA (scommentarne uno)
+                "SELECT owner, titolo FROM files where username = '" + quser +
+                "'"); //CON GERARCHIA (scommentarne uno)
         if (query.exec()) {
             std::multimap<std::string, std::string> files;
             while (query.next()) {
@@ -225,7 +223,8 @@ ManagementDB::handleRenameFile(const std::string &user, const std::string &oldNa
         return "CONNESSION_ERROR_";
 }
 
-std::string ManagementDB::getInvitation(const std::string &user, const std::string &owner, const std::string &file) {
+std::string
+ManagementDB::getInvitation(const std::string &user, const std::string &owner, const std::string &file) {
     QSqlDatabase db = connect();
 
     if (db.open()) {
@@ -237,19 +236,21 @@ std::string ManagementDB::getInvitation(const std::string &user, const std::stri
                 "SELECT invitation FROM files WHERE username = '" + quser + "' AND titolo = '" + qfile +
                 "' AND owner = '" + qowner + "'");
         if (query.exec()) {
-            db.close();
-            return query.value(0).toString().toStdString();
-        } else {
-            db.close();
-            return "QUERY_REFUSED";
-        }
+            if (query.next()) {
+                db.close();
+                return query.value(0).toString().toStdString();
+            }
 
+        }
+        db.close();
+        return "QUERY_REFUSED";
     } else
         return "CONNESSION_ERROR_";
 }
 
-std::string ManagementDB::validateInvitation(const std::string &user, const std::string &owner, const std::string &file,
-                                             const std::string &code) {
+std::string
+ManagementDB::validateInvitation(const std::string &user, const std::string &owner, const std::string &file,
+                                 const std::string &code) {
     QSqlDatabase db = connect();
     if (db.open()) {
         QSqlQuery query;
@@ -262,22 +263,22 @@ std::string ManagementDB::validateInvitation(const std::string &user, const std:
                 "SELECT COUNT(1) FROM files WHERE owner ='" + qowner + "' and titolo ='" +
                 qfile + "' AND invitation = '" + qcode + "'");
         if (query.exec()) {
-            query.next();
-            if (query.value(0) == 1) {
-                query.prepare(
-                        "INSERT INTO files (username, titolo, invitation, owner) VALUES ('" + quser + "', '" + qfile +
-                        "', '/', " + qowner + "')");
-                if (!query.exec())
-                    response = "INVITATION_ERROR";
-                response = "INVITATION_SUCCESS";
-            } else
-                response = "INVITATION_ERROR";
-        } else {
-            response = "QUERY_ERROR";
+            if (query.next()) {
+                if (query.value(0) == 1) {
+                    query.prepare(
+                            "INSERT INTO files (username, titolo, invitation, owner) VALUES ('" + quser + "', '" +
+                            qfile +
+                            "', '/', " + qowner + "')");
+                    if (query.exec()) {
+                        db.close();
+                        return "INVITATION_SUCCESS";
+                    }
+                }
+
+            }
         }
         db.close();
-        return response;
-    } else {
+        return "INVITATION_ERROR";
+    } else
         return "CONNESSION_ERROR";
-    }
 }
