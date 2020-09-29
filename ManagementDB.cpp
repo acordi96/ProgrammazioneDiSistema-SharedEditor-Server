@@ -2,7 +2,7 @@
 // Created by Sam on 01/apr/2020.
 //
 
-#include "ManagementDB.h"
+#include "Headers/ManagementDB.h"
 
 QSqlDatabase ManagementDB::connect() { //TODO: database and multithreading
     if (this->database.databaseName() == "login") {
@@ -32,26 +32,30 @@ std::string ManagementDB::handleLogin(const std::string &user, const std::string
     if (db.open()) {
         QSqlQuery query;
         QString username = QString::fromUtf8(user.data(), user.size());
-        query.prepare("SELECT sale FROM user_login WHERE username = '"+username+"'");
-        query.exec();
-        query.next();
-        QString sale = query.value(0).toString();
-        std::string saltedPassword = md5(password+sale.toUtf8().constData());
-        QString psw = QString::fromUtf8(saltedPassword.data(), saltedPassword.size());
-        query.prepare(
-                "SELECT username, password, color FROM user_login WHERE username='" + username + "' and password='" +
-                psw + "'");
+        query.prepare("SELECT sale FROM user_login WHERE username = '" + username + "'");
         if (query.exec()) {
-            if (query.next()) {
-                color = query.value(2).toString();
-                response = "LOGIN_SUCCESS";
-            } else
-                response = "LOGIN_ERROR";
+            query.first();
+            QString sale = query.value(0).toString();
+            std::string saltedPassword = md5(password + sale.toUtf8().constData());
+            QString psw = QString::fromUtf8(saltedPassword.data(), saltedPassword.size());
+            query.prepare(
+                    "SELECT username, password, color FROM user_login WHERE username='" + username +
+                    "' and password='" +
+                    psw + "'");
+            if (query.exec()) {
+                if (query.next()) {
+                    color = query.value(2).toString();
+                    response = "LOGIN_SUCCESS";
+                } else
+                    response = "LOGIN_ERROR";
+            } else {
+                response = "QUERY_ERROR";
+            }
+            db.close();
+            return response;
         } else {
             response = "QUERY_ERROR";
         }
-        db.close();
-        return response;
     } else {
         return "CONNESSION_ERROR";
     }
@@ -77,7 +81,7 @@ std::string ManagementDB::handleSignup(const std::string &e, const std::string &
                 QString color = generateRandomColor();
                 std::srand(std::time(nullptr));
                 std::string sale = std::to_string(std::rand());
-                QString qsale = QString::fromStdString(sale.erase(12));
+                QString qsale = QString::fromStdString(sale);
                 std::string saltedPassword = psw + sale;
                 saltedPassword = md5(saltedPassword);
                 QString password = QString::fromStdString(saltedPassword);
@@ -172,8 +176,9 @@ std::multimap<std::string, std::string> ManagementDB::takeFiles(const std::strin
     if (db.open()) {
         QSqlQuery query;
         QString quser = QString::fromUtf8(user.data(), user.size());
-        query.prepare("SELECT owner, titolo FROM files"); //SENZA GERARCHIA (scommentarne uno)
-        //query.prepare("SELECT owner, titolo FROM files where username = '" + quser + "'"); //CON GERARCHIA (scommentarne uno)
+        //query.prepare("SELECT owner, titolo FROM files"); //SENZA GERARCHIA (scommentarne uno)
+        query.prepare(
+                "SELECT owner, titolo FROM files where username = '" + quser + "'"); //CON GERARCHIA (scommentarne uno)
         if (query.exec()) {
             std::multimap<std::string, std::string> files;
             while (query.next()) {

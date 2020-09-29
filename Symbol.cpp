@@ -2,7 +2,7 @@
 // Created by Sam on 14/apr/2020.
 //
 
-#include "Symbol.h"
+#include "Headers/Symbol.h"
 
 #include <utility>
 

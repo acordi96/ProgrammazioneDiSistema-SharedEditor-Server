@@ -11,7 +11,7 @@
 #include <string>
 #include <iostream>
 #include <QString>
-#include "lib/md5.h"
+#include "../Libs/md5.h"
 
 class ManagementDB {
 private:

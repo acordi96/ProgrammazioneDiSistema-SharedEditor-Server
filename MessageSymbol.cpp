@@ -2,7 +2,7 @@
 // Created by Sam on 20/apr/2020.
 //
 
-#include "MessageSymbol.h"
+#include "Headers/MessageSymbol.h"
 MessageSymbol::MessageSymbol(int type, Symbol s) : type(type), symbol(s){
 
 }

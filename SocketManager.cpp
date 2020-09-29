@@ -2,7 +2,7 @@
 // Created by Sam on 01/apr/2020.
 //
 
-#include "SocketManager.h"
+#include "Headers/SocketManager.h"
 
 SocketManager::SocketManager(boost::asio::io_context &io_context, const tcp::endpoint &endpoint) : acceptor_(io_context,
                                                                                                              endpoint) {

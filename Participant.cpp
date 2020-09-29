@@ -2,7 +2,7 @@
 // Created by Sam on 19/apr/2020.
 //
 
-#include "Participant.h"
+#include "Headers/Participant.h"
 
 
 int Participant::getId() const {

@@ -4,8 +4,8 @@
 
 #include <fstream>
 #include <boost/filesystem.hpp>
-#include "Server.h"
-#include "SocketManager.h"
+#include "Headers/Server.h"
+#include "Headers/SocketManager.h"
 
 #define nModsBeforeWrite 15 //numero di m/home/jaceschrist/Documents/progettoPDS/serverPDSodifiche per modificare il file (>0)
 

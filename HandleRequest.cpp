@@ -3,7 +3,7 @@
 //
 
 #include <fstream>
-#include "HandleRequest.h"
+#include "Headers/HandleRequest.h"
 #include <boost/filesystem.hpp>
 #include <boost/random.hpp>
 #include <boost/random/random_device.hpp>
@@ -162,7 +162,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                       << ") SIGNUP SUCCESS, COLOR GENERATED: " << colorParticiapant << std::endl;
             std::string path = boost::filesystem::current_path().string();
             path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
-            path += "/files/" + js.at("username").get<std::string>();
+            path += "/Filesystem/" + js.at("username").get<std::string>();
             boost::filesystem::create_directory(path);
             shared_from_this()->setUsername(username);
             json j = json{{"response",  "SIGNUP_SUCCESS"},
@@ -266,7 +266,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
         std::string path = boost::filesystem::current_path().string();
         path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
-        path += "/files/" + js.at("username").get<std::string>();
+        path += "/Filesystem/" + js.at("username").get<std::string>();
         boost::filesystem::path personalDir(path);
         if (!boost::filesystem::exists(personalDir)) { //anche se gia' fatto in signup
             //creazione cartella personale
@@ -320,7 +320,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         if (resDB == "FILE_OPEN_SUCCESS") {
             std::string path = boost::filesystem::current_path().string();
             path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
-            path += "/files/" + js.at("username").get<std::string>();
+            path += "/Filesystem/" + js.at("username").get<std::string>();
             std::string filename = path + "/" + js.at("name").get<std::string>() + ".txt";
             this->setCurrentFile(filename);
 
