@@ -29,8 +29,6 @@ private:
     tcp::socket socket;
     message read_msg_;
     message_queue write_msgs_;
-    //gestione db
-    ManagementDB manDB;
 
     //metodi
     void do_read_header();

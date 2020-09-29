@@ -32,23 +32,23 @@ public:
 
     void deliver(const message &msg);
 
-    void deliverToAllOnFile(const message &msg, const participant_ptr& participant);
+    void deliverToAllOnFile(const message &msg, const participant_ptr &participant);
 
     void send(const MessageSymbol &m);
 
-    void openFile(const participant_ptr& participant);
+    void openFile(const participant_ptr &participant);
 
-    std::vector<int> closeFile(const participant_ptr& participant);
+    std::vector<int> closeFile(const participant_ptr &participant);
 
     bool isFileInFileSymbols(const std::string &filename);
 
     void insertParticipantInFile(const participant_ptr &participant);
 
-    bool removeParticipantInFile(const std::string& filename, int id);
+    bool removeParticipantInFile(const std::string &filename, int id);
 
-    void removeParticipant(const participant_ptr& participant);
+    void removeParticipant(const participant_ptr &participant);
 
-    std::vector<participant_ptr> getParticipantsInFile(const std::string& filename);
+    std::vector<participant_ptr> getParticipantsInFile(const std::string &filename);
 
     MessageSymbol insertSymbol(const std::string &filename, int index, char character, int id);
 
@@ -58,11 +58,11 @@ public:
 
     std::vector<Symbol> getSymbolsPerFile(const std::string &filename);
 
-    void modFile(const std::string& filename, bool force);
+    void modFile(const std::string &filename, bool force);
 
-    std::vector<std::string> getColors(const std::vector<int>& users);
+    std::vector<std::string> getColors(const std::vector<int> &users);
 
-    std::vector<std::string> getUsernames(const std::vector<int>& users);
+    std::vector<std::string> getUsernames(const std::vector<int> &users);
 
 private:
     Server() = default;

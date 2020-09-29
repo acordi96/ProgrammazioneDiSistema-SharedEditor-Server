@@ -123,7 +123,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         username = js.at("username").get<std::string>();
         password = js.at("password").get<std::string>();
         QString colorParticiapant = "#00ffffff";
-        std::string resDB = manDB.handleLogin(username, password, colorParticiapant);
+        std::string resDB = ManagementDB::getInstance().handleLogin(username, password, colorParticiapant);
         //al log in voglio avere lista di tutti i file nel db con relativo autore
         std::multimap<std::string, std::string> risultato;
         std::list<std::string> fileWithUser;
@@ -132,7 +132,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             shared_from_this()->setColor(colorParticiapant.toStdString());
             shared_from_this()->setCurrentFile("");
             //recupero tutti i file dell'utente
-            risultato = manDB.takeFiles(username);
+            risultato = ManagementDB::getInstance().takeFiles(username);
             std::string string;
             std::string underscore = "_";
             for (const auto &p : risultato) {
@@ -157,7 +157,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         username = js.at("username").get<std::string>();
         password = js.at("password").get<std::string>();
         email = js.at("email").get<std::string>();
-        std::string colorParticiapant = manDB.handleSignup(email, username, password);
+        std::string colorParticiapant = ManagementDB::getInstance().handleSignup(email, username, password);
 
         //se la registrazione va bene, creo la cartella personale per il nuovo utente
         if (colorParticiapant != "SIGNUP_ERROR_INSERT_FAILED" && colorParticiapant != "CONNESSION_ERROR") {
@@ -300,7 +300,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         this->setCurrentFile(filename);
 
         //metto il file nel db con lo user
-        std::string resDB = manDB.handleNewFile(js.at("username").get<std::string>(),
+        std::string resDB = ManagementDB::getInstance().handleNewFile(js.at("username").get<std::string>(),
                                                 js.at("name").get<std::string>());
         if (resDB == "FILE_INSERT_SUCCESS") {
             std::cout << SocketManager::output() << "NEW FILE CREATED FOR CLIENT "
@@ -329,7 +329,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         }
     } else if (type_request == "open_file") {
 
-        std::string resDB = manDB.handleOpenFile(js.at("username").get<std::string>(),
+        std::string resDB = ManagementDB::getInstance().handleOpenFile(js.at("username").get<std::string>(),
                                                  shared_from_this()->getUsername(),
                                                  js.at("name").get<std::string>());
         if (resDB == "FILE_OPEN_SUCCESS") {
@@ -452,7 +452,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             sendAtClient(j.dump());
             return j.dump();
         }
-        std::string invitationCode = manDB.getInvitation(shared_from_this()->getUsername(), js.at("owner"),
+        std::string invitationCode = ManagementDB::getInstance().getInvitation(shared_from_this()->getUsername(), js.at("owner"),
                                                          js.at("filename"));
         if (invitationCode != "QUERY_REFUSED" && invitationCode != "CONNESSION_ERROR_") {
             json j = json{{"response",        "invitation_generated"},
@@ -469,7 +469,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                     {"owner", owner},
                     {"filename", filename}
                     {"invitation_code", invitation_code}};*/
-        std::string resp = manDB.validateInvitation(shared_from_this()->getUsername(), js.at("owner"),
+        std::string resp = ManagementDB::getInstance().validateInvitation(shared_from_this()->getUsername(), js.at("owner"),
                                                     js.at("filename"), js.at("invitation_code"));
         if (resp == "INVITATION_SUCCESS") {
             json j = json{{"response", "invitation_success"}};
@@ -497,7 +497,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         //bisognerebbe anche gestire la concorrenza, altri utenti potrebbero aver il file
         //già aperto, in questo caso o non è possibile cambiare il nome oppure bisogna notificarlo
         //a tutti gli utenti in quel momento attivi
-        std::string resDB = manDB.handleRenameFile(js.at("username").get<std::string>(),
+        std::string resDB = ManagementDB::getInstance().handleRenameFile(js.at("username").get<std::string>(),
                                                    js.at("oldName").get<std::string>(),
                                                    js.at("newName").get<std::string>());
         if (resDB == "FILE_RENAME_SUCCESS") {

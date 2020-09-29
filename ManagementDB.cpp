@@ -4,6 +4,11 @@
 
 #include "Headers/ManagementDB.h"
 
+ManagementDB &ManagementDB::getInstance() {
+    static ManagementDB instance;
+    return instance;
+}
+
 QSqlDatabase ManagementDB::connect() { //TODO: database and multithreading
     if (this->database.databaseName() == "login" && this->database.isValid()) {
         return this->database;
