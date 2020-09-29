@@ -77,7 +77,7 @@ std::string ManagementDB::handleSignup(const std::string &e, const std::string &
                 QString color = generateRandomColor();
                 std::srand(std::time(nullptr));
                 std::string sale = std::to_string(std::rand());
-                QString qsale = QString::fromStdString(sale.erase(6));
+                QString qsale = QString::fromStdString(sale.erase(12));
                 std::string saltedPassword = psw + sale;
                 saltedPassword = md5(saltedPassword);
                 QString password = QString::fromStdString(saltedPassword);
@@ -149,7 +149,7 @@ std::string ManagementDB::handleNewFile(const std::string &user, const std::stri
         std::srand(std::time(nullptr));
         std::string invitation = user + file + std::to_string(std::rand());
         invitation = md5(invitation);
-        invitation.erase(12);
+        invitation.erase(8);
         QString qinvitation = QString::fromUtf8(invitation.data(), invitation.size());
         query.prepare("INSERT INTO files(username,titolo,invitation,owner) VALUES ('" + id + "','" + title + "','" +
                       qinvitation + "','" + id + "')");
