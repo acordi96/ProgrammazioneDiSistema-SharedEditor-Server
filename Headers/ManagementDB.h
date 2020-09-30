@@ -47,6 +47,8 @@ public:
 
     std::string handleRenameFile(const std::string &user, const std::string &oldName, const std::string &newName);
 
+    std::string handleDeleteFile(const std::string &user, const std::string &name);
+
     std::string getInvitation(const std::string &user, const std::string &owner, const std::string &file);
 
     std::string validateInvitation(const std::string &user, const std::string &owner, const std::string &file,

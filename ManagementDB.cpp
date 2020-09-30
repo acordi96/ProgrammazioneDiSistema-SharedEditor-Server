@@ -210,8 +210,11 @@ ManagementDB::handleRenameFile(const std::string &user, const std::string &oldNa
         QString id = QString::fromUtf8(user.data(), user.size());
         QString vecchio = QString::fromUtf8(oldName.data(), oldName.size());
         QString nuovo = QString::fromUtf8(newName.data(), newName.size());
-        query.prepare(
+        /*query.prepare(
                 "UPDATE files SET titolo = '" + nuovo + "' WHERE username ='" + id + "' and titolo = '" + vecchio +
+                "'");*/
+        query.prepare(
+                "UPDATE files SET titolo = '" + nuovo + "' WHERE owner ='" + id + "' and titolo = '" + vecchio +
                 "'");
         if (query.exec()) {
             //la query dovrebbe ritornare il file
@@ -227,6 +230,9 @@ ManagementDB::handleRenameFile(const std::string &user, const std::string &oldNa
     } else
         return "CONNESSION_ERROR_";
 }
+
+
+
 
 std::string
 ManagementDB::getInvitation(const std::string &user, const std::string &owner, const std::string &file) {
@@ -286,4 +292,34 @@ ManagementDB::validateInvitation(const std::string &user, const std::string &own
         return "INVITATION_ERROR";
     } else
         return "CONNESSION_ERROR";
+}
+
+std::string ManagementDB::handleDeleteFile(const std::string &user, const std::string &name) {
+    QSqlDatabase db = connect();
+
+    if (db.open()) {
+        QSqlQuery query;
+        QString id = QString::fromUtf8(user.data(), user.size());
+        QString deletName = QString::fromUtf8(name.data(), name.size());
+        /*query.prepare(
+                "DELETE FROM files WHERE username ='" + id + "' and titolo = '" + deletName +
+                "'");*/
+        query.prepare(
+                "DELETE FROM files WHERE owner ='" + id + "' and titolo = '" + deletName +
+                "'");
+        if (query.exec()) {
+            //la query dovrebbe ritornare il file
+
+            db.close();
+            return "FILE_DELETE_SUCCESS";
+        } else {
+            db.close();
+            std::cout << "\n rinomina fallita\n";
+            return "FILE_DELETE_FAILED";
+        }
+
+    } else
+        return "CONNESSION_ERROR_";
+
+
 }

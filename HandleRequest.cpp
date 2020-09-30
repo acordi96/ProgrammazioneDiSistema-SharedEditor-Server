@@ -158,15 +158,20 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         password = js.at("password").get<std::string>();
         email = js.at("email").get<std::string>();
         std::string colorParticiapant = ManagementDB::getInstance().handleSignup(email, username, password);
-
+        std::cout << "\n\n color participant: " << colorParticiapant;
         //se la registrazione va bene, creo la cartella personale per il nuovo utente
         if (colorParticiapant != "SIGNUP_ERROR_INSERT_FAILED" && colorParticiapant != "CONNESSION_ERROR") {
             std::cout << SocketManager::output() << "CLIENT " << this->getId() << " ("
                       << username
                       << ") SIGNUP SUCCESS, COLOR GENERATED: " << colorParticiapant << std::endl;
             std::string path = boost::filesystem::current_path().string();
+            path = path.substr(0, path.find_last_of('\\')); //esce da cartella cmake
+            path += "\\Filesystem\\" + js.at("username").get<std::string>();
+
+            /*for Linux
             path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
-            path += "/Filesystem/" + js.at("username").get<std::string>();
+            path += "/Filesystem/" + js.at("username").get<std::string>();*/
+
             boost::filesystem::create_directory(path);
             shared_from_this()->setUsername(username);
             json j = json{{"response",  "SIGNUP_SUCCESS"},
@@ -276,16 +281,21 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         }
 
         std::string path = boost::filesystem::current_path().string();
+        path = path.substr(0, path.find_last_of('\\')); //esce da cartella cmake
+        path += "\\Filesystem\\" + js.at("username").get<std::string>();
+        /*for Linux
         path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
-        path += "/Filesystem/" + js.at("username").get<std::string>();
+        path += "/Filesystem/" + js.at("username").get<std::string>();*/
+
         boost::filesystem::path personalDir(path);
         if (!boost::filesystem::exists(personalDir)) { //anche se gia' fatto in signup
             //creazione cartella personale
             boost::filesystem::create_directory(personalDir);
             std::cout << "Cartella personale " << js.at("username") << " creata" << std::endl;
         }
-        std::string filename = path + "/" + js.at("name").get<std::string>() + ".txt";
-
+        std::string filename = path + "\\" + js.at("name").get<std::string>() + ".txt";
+        /*for Linux
+        std::string filename = path + "/" + js.at("name").get<std::string>() + ".txt";*/
         if (!boost::filesystem::exists(filename)) { //creo finicamente il file
             std::ofstream newFile;
             newFile.open(filename, std::ofstream::out);
@@ -334,9 +344,13 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                                                  js.at("name").get<std::string>());
         if (resDB == "FILE_OPEN_SUCCESS") {
             std::string path = boost::filesystem::current_path().string();
+            path = path.substr(0, path.find_last_of('\\')); //esce da cartella cmake
+            path += "\\Filesystem\\" + js.at("username").get<std::string>();
+            std::string filename = path + "\\" + js.at("name").get<std::string>() + ".txt";
+            /*for Linux
             path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
             path += "/Filesystem/" + js.at("username").get<std::string>();
-            std::string filename = path + "/" + js.at("name").get<std::string>() + ".txt";
+            std::string filename = path + "/" + js.at("name").get<std::string>() + ".txt";*/
             this->setCurrentFile(filename);
 
             if (Server::getInstance().isFileInFileSymbols(filename)) { //il file era gia' stato aperto (e' nella mappa)
@@ -482,8 +496,11 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         }
     } else if (type_request == "send-icon") {
         std::string path = boost::filesystem::current_path().string();
+        path = path.substr(0, path.find_last_of('\\')); //esce da cartella cmake
+        path += "\\Images\\" + js.at("username").get<std::string>() + ".png";
+        /*for Linux
         path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
-        path += "/Images/" + js.at("username").get<std::string>() + ".png";
+        path += "/Images/" + js.at("username").get<std::string>() + ".png";*/
         std::string imageString = js.at("icon");
         QByteArray byteArray(imageString.c_str(), imageString.length());
         /*QImage image; //TODO: not compiling
@@ -493,25 +510,100 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         sendAtClient(j.dump());
         return j.dump();
     } else if (type_request == "request_new_name") {
+
         //vado a cambiare nome file nel DB
         //bisognerebbe anche gestire la concorrenza, altri utenti potrebbero aver il file
-        //già aperto, in questo caso o non è possibile cambiare il nome oppure bisogna notificarlo
-        //a tutti gli utenti in quel momento attivi
-        std::string resDB = ManagementDB::getInstance().handleRenameFile(js.at("username").get<std::string>(),
-                                                   js.at("oldName").get<std::string>(),
-                                                   js.at("newName").get<std::string>());
-        if (resDB == "FILE_RENAME_SUCCESS") {
-            std::cout << "File rinominato correttamente" << std::endl;
+        //già aperto, in questo caso non è possibile cambiare il nome
+        std::cout << "\n entrato in request_new_name \n";
 
-            json j = json{{"response", "file_renamed"},
-                          {"newName",  js.at("newName").get<std::string>()},
-                          {"oldName",  js.at("oldName").get<std::string>()}};
-            return j.dump();
-        } else {
-            json j = json{{"response", "errore_rinomina_file"}};
+        std::string path = boost::filesystem::current_path().string();
+        std::string new_path,old_path;
+        path = path.substr(0, path.find_last_of('\\')); //esce da cartella cmake
+        path += "\\Filesystem\\" + js.at("username").get<std::string>();
+        new_path = path + "\\" + js.at("new_name").get<std::string>() + ".txt";
+        old_path = path + "\\" + js.at("old_name").get<std::string>() + ".txt";
+
+        /*for Linux
+        path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
+        path += "/Filesystem/" + js.at("username").get<std::string>();
+        new_path = path + "/" + js.at("new_name").get<std::string>() + ".txt";
+        old_path = path + "/" + js.at("old_name").get<std::string>() + ".txt";*/
+
+        //controllo se il file è in uso da qualcuno
+        if(Server::getInstance().isFileInFileSymbols(old_path)){
+            //file aperto da qualche utente, impossibile rinominare
+            json j = json{{"response", "FILE_IN_USE"}};
+            sendAtClient(j.dump());
             return j.dump();
         }
-    } else {
+
+        if (boost::filesystem::exists(new_path) ){
+
+            //il nome file esiste gia'
+            json j = json{{"response", "NEW_NAME_ALREADY_EXIST"}};
+            sendAtClient(j.dump());
+            return j.dump();
+        }
+
+        std::string resDB = ManagementDB::getInstance().handleRenameFile(js.at("username").get<std::string>(),
+                                                   js.at("old_name").get<std::string>(),
+                                                   js.at("new_name").get<std::string>());
+        std::cout << "\n res db per rename = " << resDB;
+        if (resDB == "FILE_RENAME_SUCCESS") {
+            std::cout << "\nFile rinominato correttamente" << std::endl;
+
+
+
+            boost::filesystem::rename(old_path,new_path);
+
+
+            json j = json{{"response", "FILE_RENAMED"},
+                          {"newName",  js.at("new_name").get<std::string>()},
+                          {"oldName",  js.at("old_name").get<std::string>()}};
+            sendAtClient(j.dump());
+            return j.dump();
+        } else {
+            json j = json{{"response", "ERRORE_RINOMINA_FILE"}};
+            sendAtClient(j.dump());
+            return j.dump();
+        }
+
+
+    }else if (type_request == "delete_file"){
+        std::string path = boost::filesystem::current_path().string();
+        //std::string new_path;
+        path = path.substr(0, path.find_last_of('\\')); //esce da cartella cmake
+        path += "\\Filesystem\\" + js.at("username").get<std::string>();
+        path = path + "\\" + js.at("name").get<std::string>() + ".txt";
+
+        /*for Linux
+                path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
+        path += "/Filesystem/" + js.at("username").get<std::string>();
+        path = path + "/" + js.at("name").get<std::string>() + ".txt";*/
+
+        if(Server::getInstance().isFileInFileSymbols(path)){
+            //file aperto da qualche utente, impossibile rinominare
+            json j = json{{"response", "FILE_IN_USE_D"}};
+            sendAtClient(j.dump());
+            return j.dump();
+        }
+
+        std::string resDB = ManagementDB::getInstance().handleDeleteFile(js.at("username").get<std::string>(),
+                                                   js.at("name").get<std::string>());
+        if(resDB=="FILE_DELETE_SUCCESS"){
+            boost::filesystem::remove(path);
+            json j = json{{"response", "FILE_DELETED"},
+                          {"name",  js.at("name").get<std::string>()},
+                          {"username",  js.at("username").get<std::string>()}};
+            sendAtClient(j.dump());
+            return j.dump();
+        }else {
+            json j = json{{"response", "ERRORE_ELIMINAZIONE_FILE"}};
+            sendAtClient(j.dump());
+            return j.dump();
+        }
+
+    }else {
         std::cout << "nessun match col tipo di richiesta" << std::endl;
         json j = json{{"response", "general_error"}};
         return j.dump();
