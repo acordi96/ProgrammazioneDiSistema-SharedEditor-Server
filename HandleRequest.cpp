@@ -117,6 +117,17 @@ void HandleRequest::do_write() {
 }
 
 std::string HandleRequest::handleRequestType(const json &js, const std::string &type_request) {
+
+#ifdef Q_OS_LINUX //linux
+    std::string pathFilesystem = boost::filesystem::current_path().string();
+    pathFilesystem = pathFilesystem.substr(0, pathFilesystem.find_last_of('/')); //esce da cartella cmake
+    pathFilesystem += "/Filesystem";
+#else   //winzoz
+    std::string pathFilesystem = boost::filesystem::current_path().string();
+    pathFilesystem = pathFilesystem.substr(0, pathFilesystem.find_last_of('\\')); //esce da cartella cmake
+    pathFilesystem += "\\Filesystem";
+#endif
+
     if (type_request == "request_login") {
         //prendi username e psw
         std::string username, password;
@@ -174,16 +185,12 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             std::cout << SocketManager::output() << "CLIENT " << this->getId() << " ("
                       << username
                       << ") SIGNUP SUCCESS, COLOR GENERATED: " << colorParticiapant << std::endl;
-            std::string path = boost::filesystem::current_path().string();
-            //for windows
-            /*path = path.substr(0, path.find_last_of('\\')); //esce da cartella cmake
-            path += "\\Filesystem\\" + js.at("username").get<std::string>();*/
 
-            //for Linux
-            path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
-            path += "/Filesystem/" + js.at("username").get<std::string>();
-
-            boost::filesystem::create_directory(path);
+#ifdef Q_OS_LINUX //linux
+            boost::filesystem::create_directory(pathFilesystem + "/" + username);
+#else //winzoz
+            boost::filesystem::create_directory(pathFilesystem + "\\" + username);
+#endif
             shared_from_this()->setUsername(username);
             json j = json{{"response",  "SIGNUP_SUCCESS"},
                           {"username",  username},
@@ -291,21 +298,21 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             return j.dump();
         }
 
-        std::string path = boost::filesystem::current_path().string();
-        //for windows
-        /*path = path.substr(0, path.find_last_of('\\')); //esce da cartella cmake
-        path += "\\Filesystem\\" + js.at("username").get<std::string>();*/
-
-        //for Linux
-        path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
-        path += "/Filesystem/" + js.at("username").get<std::string>();
-        boost::filesystem::path personalDir(path);
+#ifdef Q_OS_LINUX //linux
+        boost::filesystem::path personalDir(pathFilesystem + "/" + js.at("username").get<std::string>());
+#else //winzoz
+        boost::filesystem::path personalDir(pathFilesystem + "\\" + js.at("username").get<std::string>());
+#endif
         if (!boost::filesystem::exists(personalDir)) { //anche se gia' fatto in signup
             //creazione cartella personale
             boost::filesystem::create_directory(personalDir);
             std::cout << "Cartella personale " << js.at("username") << " creata" << std::endl;
         }
-        std::string filename = path + "/" + js.at("name").get<std::string>() + ".txt";
+#ifdef Q_OS_LINUX //linux
+        std::string filename = pathFilesystem + "/" + js.at("username").get<std::string>() + "/" + js.at("name").get<std::string>() + ".txt";
+#else //winzoz
+        std::string filename = pathFilesystem + "\\" + js.at("username").get<std::string>() + "\\" + js.at("name").get<std::string>() + ".txt";
+#endif
 
         if (!boost::filesystem::exists(filename)) { //creo finicamente il file
             std::ofstream newFile;
@@ -354,15 +361,11 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                                                                        shared_from_this()->getUsername(),
                                                                        js.at("name").get<std::string>());
         if (resDB == "FILE_OPEN_SUCCESS") {
-            std::string path = boost::filesystem::current_path().string();
-            //for windows
-            /*path = path.substr(0, path.find_last_of('\\')); //esce da cartella cmake
-            path += "\\Filesystem\\" + js.at("username").get<std::string>();
-            std::string filename = path + "\\" + js.at("name").get<std::string>() + ".txt";*/
-            //for Linux
-            path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
-            path += "/Filesystem/" + js.at("username").get<std::string>();
-            std::string filename = path + "/" + js.at("name").get<std::string>() + ".txt";
+#ifdef Q_OS_LINUX //linux
+            std::string filename = pathFilesystem + "/" + js.at("username").get<std::string>() + "/" + js.at("name").get<std::string>() + ".txt";
+#else //winzoz
+            std::string filename = pathFilesystem + "\\" + js.at("username").get<std::string>() + "\\" + js.at("name").get<std::string>() + ".txt";
+#endif
             this->setCurrentFile(filename);
 
             if (Server::getInstance().isFileInFileSymbols(filename)) { //il file era gia' stato aperto (e' nella mappa)
@@ -519,19 +522,13 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         //già aperto, in questo caso non è possibile cambiare il nome
         std::cout << "\n entrato in request_new_name \n";
 
-        std::string path = boost::filesystem::current_path().string();
-        std::string new_path, old_path;
-        //for windows
-        /*path = path.substr(0, path.find_last_of('\\')); //esce da cartella cmake
-        path += "\\Filesystem\\" + js.at("username").get<std::string>();
-        new_path = path + "\\" + js.at("new_name").get<std::string>() + ".txt";
-        old_path = path + "\\" + js.at("old_name").get<std::string>() + ".txt";*/
-
-        //for Linux
-        path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
-        path += "/Filesystem/" + js.at("username").get<std::string>();
-        new_path = path + "/" + js.at("new_name").get<std::string>() + ".txt";
-        old_path = path + "/" + js.at("old_name").get<std::string>() + ".txt";
+#ifdef Q_OS_LINUX //linux
+        std::string new_path = pathFilesystem + "/" + js.at("username").get<std::string>() + "/" + js.at("new_name").get<std::string>() + ".txt";
+        std::string old_path = pathFilesystem + "/" + js.at("username").get<std::string>() + "/" + js.at("old_name").get<std::string>() + ".txt";
+#else //winzoz
+        std::string new_path = pathFilesystem + "\\" + js.at("username").get<std::string>() + "\\" + js.at("new_name").get<std::string>() + ".txt";
+        std::string old_path = pathFilesystem + "\\" + js.at("username").get<std::string>() + "\\" + js.at("old_name").get<std::string>() + ".txt";
+#endif
 
         //controllo se il file è in uso da qualcuno
         if (Server::getInstance().isFileInFileSymbols(old_path)) {
@@ -573,18 +570,13 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
 
     } else if (type_request == "delete_file") {
-        std::string path = boost::filesystem::current_path().string();
-        //for windows
-        /*path = path.substr(0, path.find_last_of('\\')); //esce da cartella cmake
-        path += "\\Filesystem\\" + js.at("username").get<std::string>();
-        path = path + "\\" + js.at("name").get<std::string>() + ".txt";*/
+#ifdef Q_OS_LINUX //linux
+        std::string filename = pathFilesystem + "/" + js.at("username").get<std::string>() + "/" + js.at("name").get<std::string>() + ".txt";
+#else //winzoz
+        std::string filename = pathFilesystem + "\\" + js.at("username").get<std::string>() + "\\" + js.at("name").get<std::string>() + ".txt";
+#endif
 
-        //for Linux
-        path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
-        path += "/Filesystem/" + js.at("username").get<std::string>();
-        path = path + "/" + js.at("name").get<std::string>() + ".txt";
-
-        if (Server::getInstance().isFileInFileSymbols(path)) {
+        if (Server::getInstance().isFileInFileSymbols(filename)) {
             //file aperto da qualche utente, impossibile rinominare
             json j = json{{"response", "FILE_IN_USE_D"}};
             sendAtClient(j.dump());
@@ -594,7 +586,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         std::string resDB = ManagementDB::getInstance().handleDeleteFile(js.at("username").get<std::string>(),
                                                                          js.at("name").get<std::string>());
         if (resDB == "FILE_DELETE_SUCCESS") {
-            boost::filesystem::remove(path);
+            boost::filesystem::remove(filename);
             json j = json{{"response", "FILE_DELETED"},
                           {"name",     js.at("name").get<std::string>()},
                           {"username", js.at("username").get<std::string>()}};
