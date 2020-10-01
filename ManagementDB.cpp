@@ -159,7 +159,7 @@ std::string ManagementDB::handleNewFile(const std::string &user, const std::stri
         std::srand(std::time(nullptr));
         std::string invitation = user + file + std::to_string(std::rand());
         invitation = md5(invitation);
-        invitation.erase(8);
+        invitation.erase(15);
         QString qinvitation = QString::fromUtf8(invitation.data(), invitation.size());
         query.prepare("INSERT INTO files(username,titolo,invitation,owner) VALUES ('" + id + "','" + title + "','" +
                       qinvitation + "','" + id + "')");
@@ -235,19 +235,22 @@ ManagementDB::handleRenameFile(const std::string &user, const std::string &oldNa
 
 
 std::string
-ManagementDB::getInvitation(const std::string &user, const std::string &owner, const std::string &file) {
+ManagementDB::getInvitation(const std::string &user, const std::string &file) {
     QSqlDatabase db = connect();
 
     if (db.open()) {
         QSqlQuery query;
         QString quser = QString::fromUtf8(user.data(), user.size());
-        QString qowner = QString::fromUtf8(owner.data(), file.size());
         QString qfile = QString::fromUtf8(file.data(), file.size());
         query.prepare(
-                "SELECT invitation FROM files WHERE username = '" + quser + "' AND titolo = '" + qfile +
-                "' AND owner = '" + qowner + "'");
+                "SELECT invitation, owner FROM files WHERE username = '" + quser + "' AND titolo = '" + qfile +
+                "'");
         if (query.exec()) {
             if (query.next()) {
+                if(query.value(1).toString().toStdString() != user) {
+                    db.close();
+                    return "QUERY_REFUSED"; //chi chiede deve essere l'owner
+                }
                 db.close();
                 return query.value(0).toString().toStdString();
             }
@@ -260,32 +263,32 @@ ManagementDB::getInvitation(const std::string &user, const std::string &owner, c
 }
 
 std::string
-ManagementDB::validateInvitation(const std::string &user, const std::string &owner, const std::string &file,
-                                 const std::string &code) {
+ManagementDB::validateInvitation(const std::string &user, const std::string &code) {
     QSqlDatabase db = connect();
     if (db.open()) {
         QSqlQuery query;
         QString quser = QString::fromUtf8(user.data(), user.size());
-        QString qowner = QString::fromUtf8(owner.data(), owner.size());
-        QString qfile = QString::fromUtf8(file.data(), file.size());
         QString qcode = QString::fromUtf8(code.data(), code.size());
 
         query.prepare(
-                "SELECT COUNT(1) FROM files WHERE owner ='" + qowner + "' and titolo ='" +
-                qfile + "' AND invitation = '" + qcode + "'");
+                "SELECT titolo, owner FROM files WHERE invitation = '" + qcode + "'");
         if (query.exec()) {
             if (query.next()) {
-                if (query.value(0) == 1) {
-                    query.prepare(
-                            "INSERT INTO files (username, titolo, invitation, owner) VALUES ('" + quser + "', '" +
-                            qfile +
-                            "', '/', " + qowner + "')");
-                    if (query.exec()) {
-                        db.close();
-                        return "INVITATION_SUCCESS";
-                    }
+                QString qfile = query.value(0).toString();
+                QString qowner = query.value(1).toString();
+                if(qowner.toStdString() == user) {
+                    db.close();
+                    return "INVITATION_ERROR"; //non puoi autoinvitarti
                 }
-
+                QSqlQuery query2;
+                query2.prepare(
+                        "INSERT INTO files (username, titolo, invitation, owner) VALUES ('" + quser + "', '" +
+                        qfile +
+                        "', '/', '" + qowner + "')");
+                if (query2.exec()) {
+                    db.close();
+                    return "INVITATION_SUCCESS";
+                }
             }
         }
         db.close();
