@@ -51,7 +51,7 @@ public:
 
     std::string getInvitation(const std::string &user, const std::string &file);
 
-    std::string validateInvitation(const std::string &user, const std::string &code);
+    std::pair<std::string, std::string> validateInvitation(const std::string &user, const std::string &code);
 };
 
 

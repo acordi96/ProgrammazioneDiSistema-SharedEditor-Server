@@ -485,10 +485,14 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             return j.dump();
         }
     } else if (type_request == "validate_invitation") {
-        std::string resp = ManagementDB::getInstance().validateInvitation(shared_from_this()->getUsername(),
-                                                                          js.at("invitation_code"));
-        if (resp == "INVITATION_SUCCESS") {
-            json j = json{{"response", "invitation_success"}};
+        std::pair<std::string, std::string> resp = ManagementDB::getInstance().validateInvitation(
+                shared_from_this()->getUsername(),
+                js.at("invitation_code"));
+        if (resp.first != "REFUSED") {
+            json j = json{{"response", "invitation_success"},
+                          {"owner",    resp.first},
+                          {"filename", resp.second}
+            };
             sendAtClient(j.dump());
             return j.dump(); //TODO: client refresh file list
         } else {

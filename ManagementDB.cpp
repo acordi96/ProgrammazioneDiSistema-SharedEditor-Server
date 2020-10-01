@@ -232,8 +232,6 @@ ManagementDB::handleRenameFile(const std::string &user, const std::string &oldNa
 }
 
 
-
-
 std::string
 ManagementDB::getInvitation(const std::string &user, const std::string &file) {
     QSqlDatabase db = connect();
@@ -247,7 +245,7 @@ ManagementDB::getInvitation(const std::string &user, const std::string &file) {
                 "'");
         if (query.exec()) {
             if (query.next()) {
-                if(query.value(1).toString().toStdString() != user) {
+                if (query.value(1).toString().toStdString() != user) {
                     db.close();
                     return "QUERY_REFUSED"; //chi chiede deve essere l'owner
                 }
@@ -262,7 +260,7 @@ ManagementDB::getInvitation(const std::string &user, const std::string &file) {
         return "CONNESSION_ERROR_";
 }
 
-std::string
+std::pair<std::string, std::string>
 ManagementDB::validateInvitation(const std::string &user, const std::string &code) {
     QSqlDatabase db = connect();
     if (db.open()) {
@@ -276,9 +274,21 @@ ManagementDB::validateInvitation(const std::string &user, const std::string &cod
             if (query.next()) {
                 QString qfile = query.value(0).toString();
                 QString qowner = query.value(1).toString();
-                if(qowner.toStdString() == user) {
+                if (qowner == quser) {
                     db.close();
-                    return "INVITATION_ERROR"; //non puoi autoinvitarti
+                    return std::pair<std::string, std::string>("REFUSED", "INVITATION_ERROR"); //non puoi autoinvitarti
+                }
+                QSqlQuery query3;
+                query3.prepare(
+                        "SELECT COUNT(*) FROM files WHERE username = '" + quser + "' AND titolo = '" +
+                        qfile + "' AND owner = '" + qowner + "'");
+                if (query3.exec()) {
+                    if (query3.next()) {
+                        if (query3.value(0) > 0) { //gia' invitato
+                            db.close();
+                            return std::pair<std::string, std::string>("REFUSED", "INVITATION_ERROR");
+                        }
+                    }
                 }
                 QSqlQuery query2;
                 query2.prepare(
@@ -287,14 +297,14 @@ ManagementDB::validateInvitation(const std::string &user, const std::string &cod
                         "', '/', '" + qowner + "')");
                 if (query2.exec()) {
                     db.close();
-                    return "INVITATION_SUCCESS";
+                    return std::pair<std::string, std::string>(qowner.toStdString(), qfile.toStdString());
                 }
             }
         }
         db.close();
-        return "INVITATION_ERROR";
+        return std::pair<std::string, std::string>("REFUSED", "INVITATION_ERROR");
     } else
-        return "CONNESSION_ERROR";
+        return std::pair<std::string, std::string>("REFUSED", "CONNESSION_ERROR");
 }
 
 std::string ManagementDB::handleDeleteFile(const std::string &user, const std::string &name) {
