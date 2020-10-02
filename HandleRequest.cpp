@@ -31,7 +31,12 @@ void HandleRequest::do_read_header() {
                                 if (!ec && read_msg_.decode_header()) {
                                     do_read_body();
                                 } else {
-                                    Server::getInstance().leave(shared_from_this());
+                                    if (Server::getInstance().isParticipantIn(shared_from_this()->getId())) {
+                                        handleRequestType(json{{"operation", "req_logout"},
+                                                               {"username",  ""}},
+                                                          "req_logout");
+                                        Server::getInstance().leave(shared_from_this());
+                                    }
                                 }
                             });
 }
@@ -65,7 +70,12 @@ void HandleRequest::do_read_body() {
 
                                     do_read_header();
                                 } else {
-                                    Server::getInstance().leave(shared_from_this());
+                                    if (Server::getInstance().isParticipantIn(shared_from_this()->getId())) {
+                                        handleRequestType(json{{"operation", "req_logout"},
+                                                               {"username",  ""}},
+                                                          "req_logout");
+                                        Server::getInstance().leave(shared_from_this());
+                                    }
                                 }
                             });
 }
@@ -208,9 +218,15 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             std::vector<int> othersOnFile = Server::getInstance().closeFile(shared_from_this());
             if (othersOnFile.empty()) { //nessun altro sul file
                 std::cout << SocketManager::output() << "CLIENT "
-                          << shared_from_this()->getId()
-                          << " ("
-                          << shared_from_this()->getUsername() << ") LOGOUT AND FREE FILE: "
+                          << shared_from_this()->getId();
+                if (shared_from_this()->getUsername() != "")
+                    std::cout << " ("
+                              << shared_from_this()->getUsername() << ")";
+                if (js.at("username") != "")
+                    std::cout << " LOGOUT ";
+                else
+                    std::cout << " CLOSE ";
+                std::cout << "AND FREE FILE: "
                           << shared_from_this()->getCurrentFile() << std::endl;
             } else { //altri sul file
                 std::vector<std::string> colors = Server::getInstance().getColors(othersOnFile);
@@ -220,20 +236,35 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                               {"usernames",  usernames},
                               {"colorsList", colors},
                               {"usernames",  usernames}};
-                sendAtClient(j.dump());
                 sendAllClient(j.dump(), shared_from_this()->getId());
                 std::cout << SocketManager::output() << "CLIENT "
-                          << shared_from_this()->getId()
-                          << " ("
-                          << shared_from_this()->getUsername() << ") LOGOUT, STILL OPENED FILE: "
+                          << shared_from_this()->getId();
+                if (shared_from_this()->getUsername() != "")
+                    std::cout << " ("
+                              << shared_from_this()->getUsername() << ")";
+                if (js.at("username") != "")
+                    std::cout << " LOGOUT, ";
+                else
+                    std::cout << " CLOSE, ";
+                std::cout << "STILL OPENED FILE: "
                           << shared_from_this()->getCurrentFile() << std::endl;
             }
+        } else {
+            std::cout << SocketManager::output() << "CLIENT "
+                      << shared_from_this()->getId();
+            if (shared_from_this()->getUsername() != "")
+                std::cout << " ("
+                          << shared_from_this()->getUsername() << ")";
+            if (js.at("username") != "") {
+                std::cout << " LOGOUT" << std::endl;
+                json j = json{{"response", "logged_out"}};
+                sendAtClient(j.dump());
+            } else
+                std::cout << " CLOSE" << std::endl;
         }
         //rimuovi partipipant
-        Server::getInstance().removeParticipant(shared_from_this());
-        json j = json{{"response", "logout"}};
-        sendAtClient(j.dump());
-        return j.dump();
+        Server::getInstance().leave(shared_from_this());
+        return "logged_out";
     } else if (type_request == "close_file") {
         std::vector<int> othersOnFile = Server::getInstance().closeFile(shared_from_this());
         if (othersOnFile.empty()) { //nessun altro sul file
@@ -309,7 +340,9 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             std::cout << "Cartella personale " << js.at("username") << " creata" << std::endl;
         }
 #ifdef Q_OS_LINUX //linux
-        std::string filename = pathFilesystem + "/" + js.at("username").get<std::string>() + "/" + js.at("name").get<std::string>() + ".txt";
+        std::string filename =
+                pathFilesystem + "/" + js.at("username").get<std::string>() + "/" + js.at("name").get<std::string>() +
+                ".txt";
 #else //winzoz
         std::string filename = pathFilesystem + "\\" + js.at("username").get<std::string>() + "\\" + js.at("name").get<std::string>() + ".txt";
 #endif
@@ -362,7 +395,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                                                                        js.at("name").get<std::string>());
         if (resDB == "FILE_OPEN_SUCCESS") {
 #ifdef Q_OS_LINUX //linux
-            std::string filename = pathFilesystem + "/" + js.at("username").get<std::string>() + "/" + js.at("name").get<std::string>() + ".txt";
+            std::string filename = pathFilesystem + "/" + js.at("username").get<std::string>() + "/" +
+                                   js.at("name").get<std::string>() + ".txt";
 #else //winzoz
             std::string filename = pathFilesystem + "\\" + js.at("username").get<std::string>() + "\\" + js.at("name").get<std::string>() + ".txt";
 #endif
@@ -520,11 +554,12 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         //vado a cambiare nome file nel DB
         //bisognerebbe anche gestire la concorrenza, altri utenti potrebbero aver il file
         //già aperto, in questo caso non è possibile cambiare il nome
-        std::cout << "\n entrato in request_new_name \n";
 
 #ifdef Q_OS_LINUX //linux
-        std::string new_path = pathFilesystem + "/" + js.at("username").get<std::string>() + "/" + js.at("new_name").get<std::string>() + ".txt";
-        std::string old_path = pathFilesystem + "/" + js.at("username").get<std::string>() + "/" + js.at("old_name").get<std::string>() + ".txt";
+        std::string new_path = pathFilesystem + "/" + js.at("username").get<std::string>() + "/" +
+                               js.at("new_name").get<std::string>() + ".txt";
+        std::string old_path = pathFilesystem + "/" + js.at("username").get<std::string>() + "/" +
+                               js.at("old_name").get<std::string>() + ".txt";
 #else //winzoz
         std::string new_path = pathFilesystem + "\\" + js.at("username").get<std::string>() + "\\" + js.at("new_name").get<std::string>() + ".txt";
         std::string old_path = pathFilesystem + "\\" + js.at("username").get<std::string>() + "\\" + js.at("old_name").get<std::string>() + ".txt";
@@ -549,9 +584,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         std::string resDB = ManagementDB::getInstance().handleRenameFile(js.at("username").get<std::string>(),
                                                                          js.at("old_name").get<std::string>(),
                                                                          js.at("new_name").get<std::string>());
-        std::cout << "\n res db per rename = " << resDB;
         if (resDB == "FILE_RENAME_SUCCESS") {
-            std::cout << "\nFile rinominato correttamente" << std::endl;
 
 
             boost::filesystem::rename(old_path, new_path);
@@ -571,7 +604,9 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
     } else if (type_request == "delete_file") {
 #ifdef Q_OS_LINUX //linux
-        std::string filename = pathFilesystem + "/" + js.at("username").get<std::string>() + "/" + js.at("name").get<std::string>() + ".txt";
+        std::string filename =
+                pathFilesystem + "/" + js.at("username").get<std::string>() + "/" + js.at("name").get<std::string>() +
+                ".txt";
 #else //winzoz
         std::string filename = pathFilesystem + "\\" + js.at("username").get<std::string>() + "\\" + js.at("name").get<std::string>() + ".txt";
 #endif

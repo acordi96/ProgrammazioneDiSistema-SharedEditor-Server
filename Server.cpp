@@ -7,7 +7,7 @@
 #include "Headers/Server.h"
 #include "Headers/SocketManager.h"
 
-#define nModsBeforeWrite 15 //numero di m/home/jaceschrist/Documents/progettoPDS/serverPDSodifiche per modificare il file (>0)
+#define nModsBeforeWrite 15 //numero di modifiche per modificare il file (>0)
 
 Server::~Server() {
     std::vector<std::string> openFiles;
@@ -190,15 +190,6 @@ void Server::modFile(const std::string &filename, bool force) {
     }
 }
 
-void Server::removeParticipant(const participant_ptr &participant) {
-    for (auto it = participants_.begin(); it != participants_.end(); ++it) {
-        if (it->get()->getId() == participant->getId()) {
-            this->participants_.erase(it);
-            break;
-        }
-    }
-}
-
 std::vector<int> Server::closeFile(const participant_ptr &participant) {
     std::vector<int> othersOnFile;
     if (this->removeParticipantInFile(participant->getCurrentFile(),
@@ -217,11 +208,10 @@ std::vector<int> Server::closeFile(const participant_ptr &participant) {
 
 std::vector<std::string> Server::getColors(const std::vector<int>& users) {
     std::vector<std::string> colors;
-    for(auto &participant : participants_) {
-        for(auto &user : users) {
+    for(auto &user : users) {
+        for(auto &participant : participants_) {
             if(participant->getId() == user) {
-                colors.push_back(participant->getColor());
-                break;
+                colors.emplace_back(participant->getColor());
             }
         }
     }
@@ -230,13 +220,19 @@ std::vector<std::string> Server::getColors(const std::vector<int>& users) {
 
 std::vector<std::string> Server::getUsernames(const std::vector<int> &users) {
     std::vector<std::string> usernames;
-    for(auto &participant : participants_) {
-        for(auto &user : users) {
+    for(auto &user : users) {
+        for(auto &participant : participants_) {
             if(participant->getId() == user) {
-                usernames.push_back(participant->getUsername());
-                break;
+                usernames.emplace_back(participant->getUsername());
             }
         }
     }
     return usernames;
+}
+
+bool Server::isParticipantIn(int id) {
+    for(auto &participant : participants_)
+        if(participant->getId() == id)
+            return true;
+    return false;
 }

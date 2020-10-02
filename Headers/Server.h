@@ -46,8 +46,6 @@ public:
 
     bool removeParticipantInFile(const std::string &filename, int id);
 
-    void removeParticipant(const participant_ptr &participant);
-
     std::vector<participant_ptr> getParticipantsInFile(const std::string &filename);
 
     MessageSymbol insertSymbol(const std::string &filename, int index, char character, int id);
@@ -63,6 +61,8 @@ public:
     std::vector<std::string> getColors(const std::vector<int> &users);
 
     std::vector<std::string> getUsernames(const std::vector<int> &users);
+
+    bool isParticipantIn(int id);
 
 private:
     Server() = default;

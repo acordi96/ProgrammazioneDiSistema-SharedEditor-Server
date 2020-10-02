@@ -24,9 +24,7 @@ QSqlDatabase ManagementDB::connect() { //TODO: database and multithreading
 QString ManagementDB::generateRandomColor() {
     std::string color = "#";
     static const char alphanum[] =
-            "0123456789"
-            "ABCDEF"
-            "abcdef";
+            "0123456789ABCDEF";
 
     std::srand((unsigned) time(NULL)/* * getpid()*/);
     for (int i = 0; i < 6; ++i)
