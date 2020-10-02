@@ -47,8 +47,11 @@ void HandleRequest::do_read_body() {
                             [this, self](boost::system::error_code ec, std::size_t /*length*/) {
                                 if (!ec) {
                                     std::cout << SocketManager::output()
-                                              << "REQUEST FROM CLIENT " << this->getId()
-                                              << " (" << this->getUsername() << "): " << read_msg_.body() << std::endl;
+                                              << "REQUEST FROM CLIENT " << this->getId();
+                                    if (shared_from_this()->getUsername() != "")
+                                        std::cout << " ("
+                                                  << shared_from_this()->getUsername() << ")";
+                                    std::cout << ": " << read_msg_.body() << std::endl;
                                     json messageFromClient;
                                     try {
                                         std::string message = read_msg_.body();
@@ -87,9 +90,11 @@ void HandleRequest::sendAtClient(const std::string &j_string) {
     std::memcpy(msg.body(), j_string.data(), msg.body_length());
     msg.body()[msg.body_length()] = '\0';
     msg.encode_header();
-    std::cout << SocketManager::output() << "RESPONSE TO CLIENT " << this->getId() << " ("
-              << this->getUsername()
-              << "): " << msg.body() << std::endl;
+    std::cout << SocketManager::output() << "RESPONSE TO CLIENT " << this->getId();
+    if (shared_from_this()->getUsername() != "")
+        std::cout << " ("
+                  << shared_from_this()->getUsername() << ")";
+    std::cout << ": " << msg.body() << std::endl;
     shared_from_this()->deliver(msg);
 
 }
@@ -503,21 +508,6 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             return j.dump();
         } else {
             json j = json{{"response", "errore_apertura_file"}};
-            sendAtClient(j.dump());
-            return j.dump();
-        }
-    } else if (type_request == "get_invitation") {
-        /*json{     {"operation", "get_invitation"},
-                    {"filename", filename};*/
-        std::string invitationCode = ManagementDB::getInstance().getInvitation(shared_from_this()->getUsername(),
-                                                                               js.at("filename"));
-        if (invitationCode != "QUERY_REFUSED" && invitationCode != "CONNESSION_ERROR_") {
-            json j = json{{"response",        "get_invitation_success"},
-                          {"invitation_code", invitationCode}};
-            sendAtClient(j.dump());
-            return j.dump();
-        } else {
-            json j = json{{"response", "error_get_invitation"}};
             sendAtClient(j.dump());
             return j.dump();
         }

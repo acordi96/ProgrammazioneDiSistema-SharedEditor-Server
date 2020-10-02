@@ -49,8 +49,6 @@ public:
 
     std::string handleDeleteFile(const std::string &user, const std::string &name);
 
-    std::string getInvitation(const std::string &user, const std::string &file);
-
     std::pair<std::string, std::string> validateInvitation(const std::string &user, const std::string &code);
 };
 

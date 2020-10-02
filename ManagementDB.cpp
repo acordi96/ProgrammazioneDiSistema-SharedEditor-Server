@@ -179,18 +179,18 @@ std::multimap<std::string, std::string> ManagementDB::takeFiles(const std::strin
     if (db.open()) {
         QSqlQuery query;
         QString quser = QString::fromUtf8(user.data(), user.size());
-        //query.prepare("SELECT owner, titolo FROM files"); //SENZA GERARCHIA (scommentarne uno)
         query.prepare(
-                "SELECT owner, titolo FROM files where username = '" + quser +
-                "'"); //CON GERARCHIA (scommentarne uno)
+                "SELECT owner, titolo, invitation FROM files where username = '" + quser +
+                "'");
         if (query.exec()) {
             std::multimap<std::string, std::string> files;
             while (query.next()) {
                 QString username = query.value(0).toString();
                 QString title = query.value(1).toString();
+                QString invitation = query.value(2).toString();
                 std::string utente = username.toStdString();
                 std::string titolo = title.toStdString();
-                files.insert({utente, titolo});
+                files.insert({utente, titolo + invitation.toStdString()});
             }
             db.close();
             return files;
@@ -229,35 +229,6 @@ ManagementDB::handleRenameFile(const std::string &user, const std::string &oldNa
         return "CONNESSION_ERROR_";
 }
 
-
-std::string
-ManagementDB::getInvitation(const std::string &user, const std::string &file) {
-    QSqlDatabase db = connect();
-
-    if (db.open()) {
-        QSqlQuery query;
-        QString quser = QString::fromUtf8(user.data(), user.size());
-        QString qfile = QString::fromUtf8(file.data(), file.size());
-        query.prepare(
-                "SELECT invitation, owner FROM files WHERE username = '" + quser + "' AND titolo = '" + qfile +
-                "'");
-        if (query.exec()) {
-            if (query.next()) {
-                if (query.value(1).toString().toStdString() != user) {
-                    db.close();
-                    return "QUERY_REFUSED"; //chi chiede deve essere l'owner
-                }
-                db.close();
-                return query.value(0).toString().toStdString();
-            }
-
-        }
-        db.close();
-        return "QUERY_REFUSED";
-    } else
-        return "CONNESSION_ERROR_";
-}
-
 std::pair<std::string, std::string>
 ManagementDB::validateInvitation(const std::string &user, const std::string &code) {
     QSqlDatabase db = connect();
@@ -292,7 +263,7 @@ ManagementDB::validateInvitation(const std::string &user, const std::string &cod
                 query2.prepare(
                         "INSERT INTO files (username, titolo, invitation, owner) VALUES ('" + quser + "', '" +
                         qfile +
-                        "', '/', '" + qowner + "')");
+                        "', '///////////////', '" + qowner + "')");
                 if (query2.exec()) {
                     db.close();
                     return std::pair<std::string, std::string>(qowner.toStdString(), qfile.toStdString());
