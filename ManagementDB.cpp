@@ -275,29 +275,40 @@ ManagementDB::validateInvitation(const std::string &user, const std::string &cod
         return std::pair<std::string, std::string>("REFUSED", "CONNESSION_ERROR");
 }
 
-std::string ManagementDB::handleDeleteFile(const std::string &user, const std::string &name) {
+std::string ManagementDB::handleDeleteFile(const std::string &user, const std::string &name, const std::string &owner) {
     QSqlDatabase db = connect();
 
     if (db.open()) {
         QSqlQuery query;
-        QString id = QString::fromUtf8(user.data(), user.size());
-        QString deletName = QString::fromUtf8(name.data(), name.size());
-        /*query.prepare(
-                "DELETE FROM files WHERE username ='" + id + "' and titolo = '" + deletName +
-                "'");*/
-        query.prepare(
-                "DELETE FROM files WHERE owner ='" + id + "' and titolo = '" + deletName +
-                "'");
-        if (query.exec()) {
-            //la query dovrebbe ritornare il file
-
-            db.close();
-            return "FILE_DELETE_SUCCESS";
+        QString qowner = QString::fromUtf8(owner.data(), owner.size());
+        QString qfilename = QString::fromUtf8(name.data(), name.size());
+        QString quser = QString::fromUtf8(user.data(), user.size());
+        if(owner == user) {
+            query.prepare(
+                    "DELETE FROM files WHERE owner ='" + qowner + "' and titolo = '" + qfilename +
+                    "'");
+            if (query.exec()) {
+                db.close();
+                return "FILE_DELETE_SUCCESS";
+            } else {
+                db.close();
+                std::cout << "\n rinomina fallita\n";
+                return "FILE_DELETE_FAILED";
+            }
         } else {
-            db.close();
-            std::cout << "\n rinomina fallita\n";
-            return "FILE_DELETE_FAILED";
+            query.prepare(
+                    "DELETE FROM files WHERE owner ='" + qowner + "' and titolo = '" + qfilename +
+                    "' and username = '" + quser + "'");
+            if (query.exec()) {
+                db.close();
+                return "FILE_DELETE_SUCCESS";
+            } else {
+                db.close();
+                std::cout << "\n rinomina fallita\n";
+                return "FILE_DELETE_FAILED";
+            }
         }
+
 
     } else
         return "CONNESSION_ERROR_";

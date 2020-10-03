@@ -145,10 +145,11 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
     if (type_request == "request_login") {
         //prendi username e psw
-        std::string username, password, email;
+        std::string username, password;
         username = js.at("username").get<std::string>();
         password = js.at("password").get<std::string>();
         QString colorParticiapant = "#00ffffff";
+        QString email;
         std::string resDB = ManagementDB::getInstance().handleLogin(username, password, colorParticiapant, email);
         //al log in voglio avere lista di tutti i file nel db con relativo autore
         std::multimap<std::pair<std::string, std::string>, std::string> risultato;
@@ -178,7 +179,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             }*/
             json j = json{{"response",    resDB},
                           {"username",    username},
-                          {"email",       email},
+                          {"email",       email.toStdString()},
                           {"colorUser",   colorParticiapant.toStdString()},
                           {"owners",      owners},
                           {"filenames",   filenames},
@@ -617,12 +618,14 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         }
 
         std::string resDB = ManagementDB::getInstance().handleDeleteFile(js.at("username").get<std::string>(),
-                                                                         js.at("name").get<std::string>());
+                                                                         js.at("name").get<std::string>(),
+                                                                         js.at("owner").get<std::string>());
         if (resDB == "FILE_DELETE_SUCCESS") {
             boost::filesystem::remove(filename);
             json j = json{{"response", "file_deleted"},
                           {"name",     js.at("name").get<std::string>()},
-                          {"username", js.at("username").get<std::string>()}};
+                          {"username", js.at("username").get<std::string>()},
+                          {"owner",    js.at("owner").get<std::string>()}};
             sendAtClient(j.dump());
             return j.dump();
         } else {
