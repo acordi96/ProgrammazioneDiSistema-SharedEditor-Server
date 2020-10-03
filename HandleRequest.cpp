@@ -151,21 +151,22 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         QString colorParticiapant = "#00ffffff";
         std::string resDB = ManagementDB::getInstance().handleLogin(username, password, colorParticiapant);
         //al log in voglio avere lista di tutti i file nel db con relativo autore
-        std::multimap<std::string, std::string> risultato;
-        std::list<std::string> fileWithUser;
+        std::multimap<std::pair<std::string, std::string>, std::string> risultato;
         if (resDB == "LOGIN_SUCCESS") {
             shared_from_this()->setUsername(username);
             shared_from_this()->setColor(colorParticiapant.toStdString());
             shared_from_this()->setCurrentFile("");
             //recupero tutti i file dell'utente
             risultato = ManagementDB::getInstance().takeFiles(username);
-            std::string string;
-            std::string underscore = "_";
-            for (const auto &p : risultato) {
-                string = p.first + underscore + p.second;
-                fileWithUser.push_back(string);
+            std::vector<std::string> owners;
+            std::vector<std::string> filenames;
+            std::vector<std::string> invitations;
+            std::multimap<std::pair<std::string, std::string>, std::string>::iterator iter;
+            for(iter = risultato.begin(); iter != risultato.end(); ++iter) {
+                owners.emplace_back(iter->first.first);
+                filenames.emplace_back(iter->first.second);
+                invitations.emplace_back(iter->second);
             }
-            fileWithUser.sort();
             //send icon if exist //TODO: gestione icona sospesa
             /*std::string path = boost::filesystem::current_path().string();
             path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
@@ -177,8 +178,11 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             }*/
             json j = json{{"response",  resDB},
                           {"username",  username},
+                          //TODO: mandare {"email", ...
                           {"colorUser", colorParticiapant.toStdString()},
-                          {"files",     fileWithUser}/*,
+                          {"owners",     owners},
+                          {"filenames", filenames},
+                          {"invitations", invitations}/*,
                           {"icon",      icon}*/};
             sendAtClient(j.dump());
             return j.dump();
@@ -381,7 +385,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                           {"invitation", ManagementDB::getInstance().getInvitation(shared_from_this()->getUsername(), js.at("name").get<std::string>())}};
             sendAtClient(j.dump());
             //mando lista participant sul file (solo lui per ora)
-            std::vector<int> participantsOnFileId(shared_from_this()->getId());
+            std::vector<int> participantsOnFileId;
+            participantsOnFileId.push_back(shared_from_this()->getId());
             std::vector<std::string> colors = Server::getInstance().getColors(participantsOnFileId);
             std::vector<std::string> usernames = Server::getInstance().getUsernames(participantsOnFileId);
             j = json{{"response",   "update_participants"},
@@ -523,7 +528,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                           {"filename", resp.second}
             };
             sendAtClient(j.dump());
-            return j.dump(); //TODO: client refresh file list
+            return j.dump();
         } else {
             json j = json{{"response", "invitation_error"}};
             sendAtClient(j.dump());
@@ -582,7 +587,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             boost::filesystem::rename(old_path, new_path);
 
 
-            json j = json{{"response", "FILE_RENAMED"},
+            json j = json{{"response", "file_renamed"},
                           {"newName",  js.at("new_name").get<std::string>()},
                           {"oldName",  js.at("old_name").get<std::string>()}};
             sendAtClient(j.dump());
@@ -614,7 +619,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                                                                          js.at("name").get<std::string>());
         if (resDB == "FILE_DELETE_SUCCESS") {
             boost::filesystem::remove(filename);
-            json j = json{{"response", "FILE_DELETED"},
+            json j = json{{"response", "file_deleted"},
                           {"name",     js.at("name").get<std::string>()},
                           {"username", js.at("username").get<std::string>()}};
             sendAtClient(j.dump());

@@ -41,7 +41,7 @@ public:
 
     std::string handleNewFile(const std::string &user, const std::string &file);
 
-    std::multimap<std::string, std::string> takeFiles(const std::string &user);
+    std::multimap<std::pair<std::string, std::string>, std::string> takeFiles(const std::string &user);
 
     std::string handleOpenFile(const std::string &owner, const std::string &user, const std::string &file);
 

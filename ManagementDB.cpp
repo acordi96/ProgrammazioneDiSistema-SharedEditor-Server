@@ -9,7 +9,7 @@ ManagementDB &ManagementDB::getInstance() {
     return instance;
 }
 
-QSqlDatabase ManagementDB::connect() { //TODO: database and multithreading
+QSqlDatabase ManagementDB::connect() {
     if (this->database.databaseName() == "login" && this->database.isValid()) {
         return this->database;
     }
@@ -174,7 +174,7 @@ std::string ManagementDB::handleNewFile(const std::string &user, const std::stri
         return "CONNESSION_ERROR_";
 }
 
-std::multimap<std::string, std::string> ManagementDB::takeFiles(const std::string &user) {
+std::multimap<std::pair<std::string, std::string>, std::string> ManagementDB::takeFiles(const std::string &user) {
     QSqlDatabase db = connect();
     if (db.open()) {
         QSqlQuery query;
@@ -183,20 +183,18 @@ std::multimap<std::string, std::string> ManagementDB::takeFiles(const std::strin
                 "SELECT owner, titolo, invitation FROM files where username = '" + quser +
                 "'");
         if (query.exec()) {
-            std::multimap<std::string, std::string> files;
+            std::multimap<std::pair<std::string, std::string>, std::string> files;
             while (query.next()) {
-                QString username = query.value(0).toString();
-                QString title = query.value(1).toString();
+                QString owner = query.value(0).toString();
+                QString filename = query.value(1).toString();
                 QString invitation = query.value(2).toString();
-                std::string utente = username.toStdString();
-                std::string titolo = title.toStdString();
-                files.insert({utente, titolo + invitation.toStdString()});
+                files.insert({std::pair<std::string, std::string>(owner.toStdString(), filename.toStdString()), invitation.toStdString()});
             }
             db.close();
             return files;
         }
     }
-    return std::multimap<std::string, std::string>();
+    return std::multimap<std::pair<std::string, std::string>, std::string>();
 }
 
 std::string
