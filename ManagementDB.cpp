@@ -32,7 +32,7 @@ QString ManagementDB::generateRandomColor() {
     return (QString::fromUtf8(color.data(), color.size()));
 }
 
-std::string ManagementDB::handleLogin(const std::string &user, const std::string &password, QString &color) {
+std::string ManagementDB::handleLogin(const std::string &user, const std::string &password, QString &color, QString &email) {
     QSqlDatabase db = connect();
     if (db.open()) {
         QSqlQuery query;
@@ -44,12 +44,13 @@ std::string ManagementDB::handleLogin(const std::string &user, const std::string
                 std::string saltedPassword = md5(password + sale.toUtf8().constData());
                 QString psw = QString::fromUtf8(saltedPassword.data(), saltedPassword.size());
                 query.prepare(
-                        "SELECT username, password, color FROM user_login WHERE username='" + username +
+                        "SELECT color, email FROM user_login WHERE username='" + username +
                         "' and password='" +
                         psw + "'");
                 if (query.exec()) {
                     if (query.next()) {
-                        color = query.value(2).toString();
+                        color = query.value(0).toString();
+                        email = query.value(1).toString();
                         db.close();
                         return "LOGIN_SUCCESS";
                     }

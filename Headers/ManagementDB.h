@@ -35,7 +35,7 @@ public:
 
     void operator=(ManagementDB const &) = delete;
 
-    std::string handleLogin(const std::string &user, const std::string &password, QString &color);
+    std::string handleLogin(const std::string &user, const std::string &password, QString &color, QString &email);
 
     std::string handleSignup(const std::string &email, const std::string &user, const std::string &password);
 

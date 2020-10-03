@@ -145,11 +145,11 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
     if (type_request == "request_login") {
         //prendi username e psw
-        std::string username, password;
+        std::string username, password, email;
         username = js.at("username").get<std::string>();
         password = js.at("password").get<std::string>();
         QString colorParticiapant = "#00ffffff";
-        std::string resDB = ManagementDB::getInstance().handleLogin(username, password, colorParticiapant);
+        std::string resDB = ManagementDB::getInstance().handleLogin(username, password, colorParticiapant, email);
         //al log in voglio avere lista di tutti i file nel db con relativo autore
         std::multimap<std::pair<std::string, std::string>, std::string> risultato;
         if (resDB == "LOGIN_SUCCESS") {
@@ -162,7 +162,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             std::vector<std::string> filenames;
             std::vector<std::string> invitations;
             std::multimap<std::pair<std::string, std::string>, std::string>::iterator iter;
-            for(iter = risultato.begin(); iter != risultato.end(); ++iter) {
+            for (iter = risultato.begin(); iter != risultato.end(); ++iter) {
                 owners.emplace_back(iter->first.first);
                 filenames.emplace_back(iter->first.second);
                 invitations.emplace_back(iter->second);
@@ -176,12 +176,12 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             if (iconFile.good()) {
                 icon = std::string(std::istreambuf_iterator<char>(iconFile), {});
             }*/
-            json j = json{{"response",  resDB},
-                          {"username",  username},
-                          //TODO: mandare {"email", ...
-                          {"colorUser", colorParticiapant.toStdString()},
-                          {"owners",     owners},
-                          {"filenames", filenames},
+            json j = json{{"response",    resDB},
+                          {"username",    username},
+                          {"email",       email},
+                          {"colorUser",   colorParticiapant.toStdString()},
+                          {"owners",      owners},
+                          {"filenames",   filenames},
                           {"invitations", invitations}/*,
                           {"icon",      icon}*/};
             sendAtClient(j.dump());
@@ -380,9 +380,10 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             //stanzio le strutture
             Server::getInstance().openFile(shared_from_this());
 
-            json j = json{{"response", "new_file_created"},
-                          {"filename", js.at("name").get<std::string>()},
-                          {"invitation", ManagementDB::getInstance().getInvitation(shared_from_this()->getUsername(), js.at("name").get<std::string>())}};
+            json j = json{{"response",   "new_file_created"},
+                          {"filename",   js.at("name").get<std::string>()},
+                          {"invitation", ManagementDB::getInstance().getInvitation(shared_from_this()->getUsername(),
+                                                                                   js.at("name").get<std::string>())}};
             sendAtClient(j.dump());
             //mando lista participant sul file (solo lui per ora)
             std::vector<int> participantsOnFileId;
