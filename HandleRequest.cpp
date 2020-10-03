@@ -145,9 +145,14 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
     if (type_request == "request_login") {
         //prendi username e psw
-        std::string username, password;
-        username = js.at("username").get<std::string>();
-        password = js.at("password").get<std::string>();
+        std::string username = js.at("username").get<std::string>();
+        std::string password = js.at("password").get<std::string>();
+        if(Server::getInstance().isParticipantIn(username)) {
+            json j = json{{"response", "user_already_logged"},
+                          {"username", username}};
+            sendAtClient(j.dump());
+            return j.dump();
+        }
         QString colorParticiapant = "#00ffffff";
         QString email;
         std::string resDB = ManagementDB::getInstance().handleLogin(username, password, colorParticiapant, email);

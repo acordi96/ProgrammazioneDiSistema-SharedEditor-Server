@@ -64,6 +64,8 @@ public:
 
     bool isParticipantIn(int id);
 
+    bool isParticipantIn(const std::string& username);
+
 private:
     Server() = default;
 

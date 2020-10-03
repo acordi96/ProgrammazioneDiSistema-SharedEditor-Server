@@ -236,3 +236,10 @@ bool Server::isParticipantIn(int id) {
             return true;
     return false;
 }
+
+bool Server::isParticipantIn(const std::string& username) {
+    for(auto &participant : participants_)
+        if(participant->getUsername() == username)
+            return true;
+    return false;
+}
