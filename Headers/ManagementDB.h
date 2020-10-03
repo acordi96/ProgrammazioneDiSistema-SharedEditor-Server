@@ -50,6 +50,8 @@ public:
     std::string handleDeleteFile(const std::string &user, const std::string &name);
 
     std::pair<std::string, std::string> validateInvitation(const std::string &user, const std::string &code);
+
+    std::string getInvitation(const std::string& owner, const std::string& filename);
 };
 
 

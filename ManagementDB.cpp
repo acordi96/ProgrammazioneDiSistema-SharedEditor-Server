@@ -305,3 +305,22 @@ std::string ManagementDB::handleDeleteFile(const std::string &user, const std::s
 
 
 }
+
+std::string ManagementDB::getInvitation(const std::string &owner, const std::string &filename) {
+    QSqlDatabase db = connect();
+    if (db.open()) {
+        QSqlQuery query;
+        QString qfilename = QString::fromUtf8(filename.data(), filename.size());
+        QString qowner = QString::fromUtf8(owner.data(), owner.size());
+        query.prepare("SELECT invitation FROM files WHERE owner = '" + qowner + "' AND titolo = '" + qfilename + "'");
+        if (query.exec()) {
+            if (query.next()) {
+                db.close();
+                return query.value(0).toString().toStdString();
+            }
+        }
+        db.close();
+        return "QUERY_FAILED";
+    } else
+        return "CONNESSION_ERROR_";
+}

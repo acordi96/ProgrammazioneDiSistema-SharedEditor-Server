@@ -376,7 +376,9 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             //stanzio le strutture
             Server::getInstance().openFile(shared_from_this());
 
-            json j = json{{"response", "new_file_created"}};
+            json j = json{{"response", "new_file_created"},
+                          {"filename", js.at("name").get<std::string>()},
+                          {"invitation", ManagementDB::getInstance().getInvitation(shared_from_this()->getUsername(), js.at("name").get<std::string>())}};
             sendAtClient(j.dump());
             //mando lista participant sul file (solo lui per ora)
             std::vector<int> participantsOnFileId(shared_from_this()->getId());
