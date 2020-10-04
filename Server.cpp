@@ -243,3 +243,15 @@ bool Server::isParticipantIn(const std::string& username) {
             return true;
     return false;
 }
+
+participant_ptr  Server::getParticipant(const std::string &username) {
+    for(auto &participant : participants_) {
+        if(participant->getUsername() == username)
+            return participant;
+    }
+    return nullptr;
+}
+
+int Server::getOutputcount() {
+    return this->outputcount++;
+}

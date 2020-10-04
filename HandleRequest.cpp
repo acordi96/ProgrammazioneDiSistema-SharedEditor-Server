@@ -147,7 +147,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         //prendi username e psw
         std::string username = js.at("username").get<std::string>();
         std::string password = js.at("password").get<std::string>();
-        if(Server::getInstance().isParticipantIn(username)) {
+        if (Server::getInstance().isParticipantIn(username)) {
             json j = json{{"response", "user_already_logged"},
                           {"username", username}};
             sendAtClient(j.dump());
@@ -585,9 +585,11 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             return j.dump();
         }
 
+        std::vector<std::string> invited;
         std::string resDB = ManagementDB::getInstance().handleRenameFile(js.at("username").get<std::string>(),
                                                                          js.at("old_name").get<std::string>(),
-                                                                         js.at("new_name").get<std::string>());
+                                                                         js.at("new_name").get<std::string>(),
+                                                                         invited);
         if (resDB == "FILE_RENAME_SUCCESS") {
 
 
@@ -596,8 +598,10 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
             json j = json{{"response", "file_renamed"},
                           {"newName",  js.at("new_name").get<std::string>()},
-                          {"oldName",  js.at("old_name").get<std::string>()}};
-            sendAtClient(j.dump());
+                          {"oldName",  js.at("old_name").get<std::string>()},
+                          {"owner",    shared_from_this()->getUsername()}};
+            for (auto &participant : invited)
+                sendAtParticipant(j.dump(), participant);
             return j.dump();
         } else {
             json j = json{{"response", "ERRORE_RINOMINA_FILE"}};
@@ -622,16 +626,23 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             return j.dump();
         }
 
+        std::vector<std::string> invited;
         std::string resDB = ManagementDB::getInstance().handleDeleteFile(js.at("username").get<std::string>(),
                                                                          js.at("name").get<std::string>(),
-                                                                         js.at("owner").get<std::string>());
+                                                                         js.at("owner").get<std::string>(),
+                                                                         invited);
         if (resDB == "FILE_DELETE_SUCCESS") {
             boost::filesystem::remove(filename);
             json j = json{{"response", "file_deleted"},
                           {"name",     js.at("name").get<std::string>()},
                           {"username", js.at("username").get<std::string>()},
                           {"owner",    js.at("owner").get<std::string>()}};
-            sendAtClient(j.dump());
+            if (invited.empty())
+                sendAtClient(j.dump());
+            else
+                for (auto &invitedUsername : invited)
+                    sendAtParticipant(j.dump(), invitedUsername);
+
             return j.dump();
         } else {
             json j = json{{"response", "ERRORE_ELIMINAZIONE_FILE"}};
@@ -653,4 +664,17 @@ void HandleRequest::deliver(const Message &msg) {
     if (!write_in_progress) {
         do_write();
     }
+}
+
+void HandleRequest::sendAtParticipant(const std::string &response, const std::string &username) {
+    participant_ptr participant = Server::getInstance().getParticipant(username);
+    std::size_t len = response.size();
+    Message msg;
+    msg.body_length(len);
+    std::memcpy(msg.body(), response.data(), msg.body_length());
+    msg.body()[msg.body_length()] = '\0';
+    msg.encode_header();
+    std::cout << SocketManager::output() << "RESPONSE TO CLIENT " << participant->getId() << " ("
+              << participant->getUsername() << "): " << msg.body() << std::endl;
+    participant->deliver(msg);
 }

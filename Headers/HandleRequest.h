@@ -39,6 +39,8 @@ private:
 
     void sendAtClient(const std::string &response);
 
+    void sendAtParticipant(const std::string &response, const std::string &username);
+
     void sendAllClient(const std::string &responde, const int &id);
 
 public:

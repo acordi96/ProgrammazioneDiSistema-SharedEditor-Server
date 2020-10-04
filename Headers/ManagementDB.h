@@ -45,9 +45,9 @@ public:
 
     std::string handleOpenFile(const std::string &owner, const std::string &user, const std::string &file);
 
-    std::string handleRenameFile(const std::string &user, const std::string &oldName, const std::string &newName);
+    std::string handleRenameFile(const std::string &user, const std::string &oldName, const std::string &newName, std::vector<std::string> &invited);
 
-    std::string handleDeleteFile(const std::string &user, const std::string &name, const std::string &owner);
+    std::string handleDeleteFile(const std::string &user, const std::string &name, const std::string &owner, std::vector<std::string> &invited);
 
     std::pair<std::string, std::string> validateInvitation(const std::string &user, const std::string &code);
 

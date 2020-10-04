@@ -66,6 +66,10 @@ public:
 
     bool isParticipantIn(const std::string& username);
 
+    participant_ptr  getParticipant(const std::string &username);
+
+    int getOutputcount();
+
 private:
     Server() = default;
 
@@ -77,6 +81,7 @@ private:
     };
     message_queue recent_msgs_;
     msgInfo_queue infoMsgs_;
+    int outputcount = 1;
 
     std::map<std::string, std::vector<Symbol>> symbolsPerFile;
     std::map<std::string, std::vector<participant_ptr>> participantsPerFile;

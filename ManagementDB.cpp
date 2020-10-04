@@ -199,7 +199,7 @@ std::multimap<std::pair<std::string, std::string>, std::string> ManagementDB::ta
 }
 
 std::string
-ManagementDB::handleRenameFile(const std::string &user, const std::string &oldName, const std::string &newName) {
+ManagementDB::handleRenameFile(const std::string &user, const std::string &oldName, const std::string &newName, std::vector<std::string> &invited) {
     QSqlDatabase db = connect();
 
     if (db.open()) {
@@ -207,6 +207,17 @@ ManagementDB::handleRenameFile(const std::string &user, const std::string &oldNa
         QString id = QString::fromUtf8(user.data(), user.size());
         QString vecchio = QString::fromUtf8(oldName.data(), oldName.size());
         QString nuovo = QString::fromUtf8(newName.data(), newName.size());
+        QSqlQuery query2;
+        query2.prepare("SELECT username FROM files WHERE owner ='" + id + "' and titolo = '" + vecchio + "'");
+        if(query2.exec()) {
+            while (query2.next()) {
+                invited.push_back(query2.value(0).toString().toStdString());
+            }
+        } else {
+            db.close();
+            std::cout << "\n rinomina fallita\n";
+            return "FILE_DELETE_FAILED";
+        }
         /*query.prepare(
                 "UPDATE files SET titolo = '" + nuovo + "' WHERE username ='" + id + "' and titolo = '" + vecchio +
                 "'");*/
@@ -214,7 +225,6 @@ ManagementDB::handleRenameFile(const std::string &user, const std::string &oldNa
                 "UPDATE files SET titolo = '" + nuovo + "' WHERE owner ='" + id + "' and titolo = '" + vecchio +
                 "'");
         if (query.exec()) {
-            //la query dovrebbe ritornare il file
 
             db.close();
             return "FILE_RENAME_SUCCESS";
@@ -275,7 +285,7 @@ ManagementDB::validateInvitation(const std::string &user, const std::string &cod
         return std::pair<std::string, std::string>("REFUSED", "CONNESSION_ERROR");
 }
 
-std::string ManagementDB::handleDeleteFile(const std::string &user, const std::string &name, const std::string &owner) {
+std::string ManagementDB::handleDeleteFile(const std::string &user, const std::string &name, const std::string &owner, std::vector<std::string> &invited) {
     QSqlDatabase db = connect();
 
     if (db.open()) {
@@ -283,7 +293,18 @@ std::string ManagementDB::handleDeleteFile(const std::string &user, const std::s
         QString qowner = QString::fromUtf8(owner.data(), owner.size());
         QString qfilename = QString::fromUtf8(name.data(), name.size());
         QString quser = QString::fromUtf8(user.data(), user.size());
-        if(owner == user) {
+        if(owner == user) { //cancella per il creatore cancella per tutti
+            QSqlQuery query2;
+            query2.prepare("SELECT username FROM files WHERE owner ='" + qowner + "' and titolo = '" + qfilename + "'");
+            if(query2.exec()) {
+                while (query2.next()) {
+                    invited.push_back(query2.value(0).toString().toStdString());
+                }
+            } else {
+                db.close();
+                std::cout << "\n rinomina fallita\n";
+                return "FILE_DELETE_FAILED";
+            }
             query.prepare(
                     "DELETE FROM files WHERE owner ='" + qowner + "' and titolo = '" + qfilename +
                     "'");
@@ -295,7 +316,7 @@ std::string ManagementDB::handleDeleteFile(const std::string &user, const std::s
                 std::cout << "\n rinomina fallita\n";
                 return "FILE_DELETE_FAILED";
             }
-        } else {
+        } else { //cancella invito
             query.prepare(
                     "DELETE FROM files WHERE owner ='" + qowner + "' and titolo = '" + qfilename +
                     "' and username = '" + quser + "'");
