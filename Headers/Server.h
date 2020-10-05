@@ -81,7 +81,7 @@ private:
     };
     message_queue recent_msgs_;
     msgInfo_queue infoMsgs_;
-    int outputcount = 1;
+    unsigned int countOutput = 1;
 
     std::map<std::string, std::vector<Symbol>> symbolsPerFile;
     std::map<std::string, std::vector<participant_ptr>> participantsPerFile;

@@ -216,7 +216,6 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 #else //winzoz
             boost::filesystem::create_directory(pathFilesystem + "\\" + username);
 #endif
-            shared_from_this()->setUsername(username);
             json j = json{{"response",  "SIGNUP_SUCCESS"},
                           {"username",  username},
                           {"colorUser", colorParticiapant}};
@@ -264,6 +263,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 std::cout << "STILL OPENED FILE: "
                           << shared_from_this()->getCurrentFile() << std::endl;
             }
+            shared_from_this()->setCurrentFile("");
         } else {
             std::cout << SocketManager::output() << "CLIENT "
                       << shared_from_this()->getId();
@@ -637,8 +637,9 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                           {"name",     js.at("name").get<std::string>()},
                           {"username", js.at("username").get<std::string>()},
                           {"owner",    js.at("owner").get<std::string>()}};
-            if (invited.empty())
-                sendAtClient(j.dump());
+            if(invited.empty()) {
+                sendAtClient(j.dump()); //cancellazione invito
+            }
             else
                 for (auto &invitedUsername : invited)
                     sendAtParticipant(j.dump(), invitedUsername);
@@ -655,6 +656,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         json j = json{{"response", "general_error"}};
         return j.dump();
     }
+    return "";
 }
 
 void HandleRequest::deliver(const Message &msg) {
@@ -668,6 +670,8 @@ void HandleRequest::deliver(const Message &msg) {
 
 void HandleRequest::sendAtParticipant(const std::string &response, const std::string &username) {
     participant_ptr participant = Server::getInstance().getParticipant(username);
+    if (participant == nullptr)
+        return;
     std::size_t len = response.size();
     Message msg;
     msg.body_length(len);

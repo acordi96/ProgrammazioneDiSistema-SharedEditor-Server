@@ -37,7 +37,7 @@ std::string SocketManager::output() {
         number = number / 10;
         ++count;
     }
-    count = 5 - count;
+    count = 7 - count;
     for(int i = 0; i < count; i++)
         out += "0";
     out += std::to_string(outnumber) + "} - ";

@@ -253,5 +253,5 @@ participant_ptr  Server::getParticipant(const std::string &username) {
 }
 
 int Server::getOutputcount() {
-    return this->outputcount++;
+    return this->countOutput++;
 }
