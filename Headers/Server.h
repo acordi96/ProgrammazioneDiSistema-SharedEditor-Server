@@ -48,11 +48,17 @@ public:
 
     std::vector<participant_ptr> getParticipantsInFile(const std::string &filename);
 
-    MessageSymbol insertSymbol(const std::string &filename, int index, char character, int id);
+    MessageSymbol insertSymbolNewCRDT(int index, char character, const std::string& username, const std::string& filename);
 
-    MessageSymbol eraseSymbol(const std::string &filename, int startIndex, int endIndex, int id);
+    int generateIndexCRDT(Symbol symbol, const std::string& filename, int iter, int start, int end);
 
-    std::vector<int> generateNewPosition(const std::string &, int);
+    void eraseSymbolCRDT(Symbol symbolStart, Symbol symbolEnd, const std::string& filename);
+
+    void insertSymbolIndex(const Symbol& symbol, int index, const std::string& filename);
+
+    std::vector<int> generatePos(int index, std::string filename);
+
+    std::vector<int> generatePosBetween(std::vector<int> pos1, std::vector<int> pos2, std::vector<int> newPos);
 
     std::vector<Symbol> getSymbolsPerFile(const std::string &filename);
 

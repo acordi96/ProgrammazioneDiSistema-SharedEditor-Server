@@ -7,7 +7,7 @@
 #include "Headers/Server.h"
 #include "Headers/SocketManager.h"
 
-#define nModsBeforeWrite 15 //numero di modifiche per modificare il file (>0)
+#define nModsBeforeWrite 1 //numero di modifiche per modificare il file (>0)
 
 Server::~Server() {
     std::vector<std::string> openFiles;
@@ -39,7 +39,7 @@ void Server::deliver(const Message &msg) {
         p->deliver(msg);
 }
 
-void Server::deliverToAllOnFile(const Message &msg, const participant_ptr& participant) {
+void Server::deliverToAllOnFile(const Message &msg, const participant_ptr &participant) {
     recent_msgs_.push_back(msg);
 
     while (recent_msgs_.size() > max_recent_msgs)
@@ -59,7 +59,8 @@ void Server::send(const MessageSymbol &m) {
 
 void Server::openFile(const participant_ptr &participant) {
     //inserisco entry in mappa dei simboli
-    this->symbolsPerFile.emplace(std::pair<std::string, std::vector<Symbol>>(participant->getCurrentFile(), std::vector<Symbol>()));
+    this->symbolsPerFile.emplace(
+            std::pair<std::string, std::vector<Symbol>>(participant->getCurrentFile(), std::vector<Symbol>()));
     //inserisco entry in mappa delle modifiche
     this->modsPerFile.emplace(std::pair<std::string, int>(participant->getCurrentFile(), 0));
     //aggiungo participant a lista participants del file
@@ -72,73 +73,17 @@ bool Server::isFileInFileSymbols(const std::string &filename) {
     return true;
 }
 
-MessageSymbol Server::insertSymbol(const std::string &filename, int index, char character, int id) {
-    std::vector<int> vector;
-    if (this->symbolsPerFile.at(filename).empty()) {
-        vector = {0};
-        index = 0;
-    } else if (index > this->symbolsPerFile.at(filename).size() - 1) {
-        vector = {this->symbolsPerFile.at(filename).back().getPosizione().at(0) + 1};
-        index = this->symbolsPerFile.at(filename).size();
-    } else if (index == 0) {
-        vector = {this->symbolsPerFile.at(filename).front().getPosizione().at(0) - 1};
-    } else
-        vector = generateNewPosition(filename, index);
-    Symbol s(character, std::make_pair(id, this->symbolsPerFile.at(filename).size() + 1), vector);
-
-    this->symbolsPerFile.at(filename).insert(this->symbolsPerFile.at(filename).begin() + index, s);
-
-    MessageSymbol m(0, id, s, index);
-
-    return m;
-}
-
-MessageSymbol Server::eraseSymbol(const std::string &filename, int startIndex, int endIndex, int id) {
-    Symbol s = this->symbolsPerFile.at(filename).at(startIndex);
-    this->symbolsPerFile.at(filename).erase(this->symbolsPerFile.at(filename).begin() + startIndex,
-                                            this->symbolsPerFile.at(filename).begin() + endIndex);
-    MessageSymbol m(1, id, s);
-    return m;
-}
-
-std::vector<int> Server::generateNewPosition(const std::string &filename, int index) {
-    std::vector<int> posBefore = this->symbolsPerFile.at(filename)[index - 1].getPosizione();
-    std::vector<int> posAfter = this->symbolsPerFile.at(filename)[index].getPosizione();
-    std::vector<int> newPos;
-    int idBefore = posBefore.at(0);
-    int idAfter = posAfter.at(0);
-    if (idBefore - idAfter == 0) {
-        newPos.push_back(idBefore);
-        posAfter.erase(posAfter.begin());
-        posBefore.erase(posBefore.begin());
-        if (posAfter.empty()) {
-            newPos.push_back(posBefore.front() + 1);
-            return newPos;
-        }
-    } else if (idAfter - idBefore > 1) {
-        newPos.push_back(posBefore.front() + 1);
-        return newPos;
-    } else if (idAfter - idBefore == 1) {
-        newPos.push_back(idBefore);
-        posBefore.erase(posBefore.begin());
-        if (posBefore.empty()) {
-            newPos.push_back(0);
-            return newPos;
-        } else {
-            newPos.push_back(posBefore.front() + 1);
-            return newPos;
-        }
-    }
-    return std::vector<int>();
-}
-
 void Server::insertParticipantInFile(const participant_ptr &participant) {
     if (this->participantsPerFile.find(participant->getCurrentFile()) == this->participantsPerFile.end()) {
         std::vector<participant_ptr> newVector;
         newVector.push_back(participant);
         this->participantsPerFile.insert(std::make_pair(participant->getCurrentFile(), newVector));
-    } else
+    } else {
+        for (auto &p : this->participantsPerFile.at(participant->getCurrentFile()))
+            if (p == participant)
+                return;
         this->participantsPerFile.at(participant->getCurrentFile()).push_back(participant);
+    }
 }
 
 std::vector<Symbol> Server::getSymbolsPerFile(const std::string &filename) {
@@ -206,11 +151,11 @@ std::vector<int> Server::closeFile(const participant_ptr &participant) {
     }
 }
 
-std::vector<std::string> Server::getColors(const std::vector<int>& users) {
+std::vector<std::string> Server::getColors(const std::vector<int> &users) {
     std::vector<std::string> colors;
-    for(auto &user : users) {
-        for(auto &participant : participants_) {
-            if(participant->getId() == user) {
+    for (auto &user : users) {
+        for (auto &participant : participants_) {
+            if (participant->getId() == user) {
                 colors.emplace_back(participant->getColor());
             }
         }
@@ -220,9 +165,9 @@ std::vector<std::string> Server::getColors(const std::vector<int>& users) {
 
 std::vector<std::string> Server::getUsernames(const std::vector<int> &users) {
     std::vector<std::string> usernames;
-    for(auto &user : users) {
-        for(auto &participant : participants_) {
-            if(participant->getId() == user) {
+    for (auto &user : users) {
+        for (auto &participant : participants_) {
+            if (participant->getId() == user) {
                 usernames.emplace_back(participant->getUsername());
             }
         }
@@ -231,22 +176,22 @@ std::vector<std::string> Server::getUsernames(const std::vector<int> &users) {
 }
 
 bool Server::isParticipantIn(int id) {
-    for(auto &participant : participants_)
-        if(participant->getId() == id)
+    for (auto &participant : participants_)
+        if (participant->getId() == id)
             return true;
     return false;
 }
 
-bool Server::isParticipantIn(const std::string& username) {
-    for(auto &participant : participants_)
-        if(participant->getUsername() == username)
+bool Server::isParticipantIn(const std::string &username) {
+    for (auto &participant : participants_)
+        if (participant->getUsername() == username)
             return true;
     return false;
 }
 
-participant_ptr  Server::getParticipant(const std::string &username) {
-    for(auto &participant : participants_) {
-        if(participant->getUsername() == username)
+participant_ptr Server::getParticipant(const std::string &username) {
+    for (auto &participant : participants_) {
+        if (participant->getUsername() == username)
             return participant;
     }
     return nullptr;
@@ -254,4 +199,119 @@ participant_ptr  Server::getParticipant(const std::string &username) {
 
 int Server::getOutputcount() {
     return this->countOutput++;
+}
+
+MessageSymbol
+Server::insertSymbolNewCRDT(int index, char character, const std::string &username, const std::string &filename) {
+    std::vector<int> vector;
+    if (this->symbolsPerFile.at(filename).empty()) {
+        vector = {0};
+        index = 0;
+    } else if (index > this->symbolsPerFile.at(filename).size() - 1) {
+        vector = {this->symbolsPerFile.at(filename).back().getPosizione().at(0) + 1};
+        index = this->symbolsPerFile.at(filename).size();
+    } else if (index == 0) {
+        vector = {this->symbolsPerFile.at(filename).front().getPosizione().at(0) - 1};
+    } else
+        vector = generatePos(index, filename);
+    Symbol s(character, username, vector);
+
+    this->symbolsPerFile.at(filename).insert(this->symbolsPerFile.at(filename).begin() + index, s);
+
+    MessageSymbol m(0, username, s);
+
+    return m;
+}
+//inserisci symbol gia' generato in un vettore di symbol nel posto giusto
+int Server::generateIndexCRDT(Symbol symbol, const std::string &filename, int iter, int start, int end) {
+    if(start == -1 && end == -1) {
+        if(symbol.getPosizione()[0] < this->symbolsPerFile.at(filename)[0].getPosizione()[0])
+            return 0;
+        start = 0;
+        end = this->symbolsPerFile.at(filename).size();
+    }
+    if(start == end) {
+        return iter;
+    }
+    int newStart = -1;
+    int newEnd = start;
+    for(auto iterPositions = this->symbolsPerFile.at(filename).begin() + start; iterPositions != this->symbolsPerFile.at(filename).begin() + end; ++iterPositions) {
+        if(iterPositions->getPosizione().size() > iter && symbol.getPosizione().size() > iter) {
+            if(iterPositions->getPosizione()[iter] == symbol.getPosizione()[iter] && newStart == -1)
+                newStart = newEnd;
+            if(iterPositions->getPosizione()[iter] > symbol.getPosizione()[iter]) {
+                if (newStart == -1)
+                    return newEnd;
+                else
+                    return generateIndexCRDT(symbol, filename, ++iter, newStart, newEnd);
+            }
+        }
+        newEnd++;
+    }
+    return newEnd;
+}
+
+void Server::insertSymbolIndex(const Symbol& symbol, int index, const std::string& filename) {
+    int i = 0;
+    for(auto iterPositions = this->symbolsPerFile.at(filename).begin(); iterPositions != this->symbolsPerFile.at(filename).end(); ++iterPositions) {
+        if(index == i) {
+            this->symbolsPerFile.at(filename).insert(iterPositions, symbol);
+            return;
+        }
+        i++;
+    }
+    this->symbolsPerFile.at(filename).insert(this->symbolsPerFile.at(filename).end(), symbol);
+}
+
+void Server::eraseSymbolCRDT(Symbol symbolStart, Symbol symbolEnd, const std::string& filename) {
+    bool foundStart = false;
+    for(auto iter = this->symbolsPerFile.at(filename).begin(); iter != this->symbolsPerFile.at(filename).end(); ++iter) {
+        if(*iter == symbolEnd) {
+            if(symbolStart == symbolEnd)
+                this->symbolsPerFile.at(filename).erase(iter);
+            return;
+        }
+        if(symbolStart == *iter)
+            foundStart = true;
+        if(foundStart) {
+            this->symbolsPerFile.at(filename).erase(iter);
+            iter--;
+        }
+    }
+}
+
+std::vector<int> Server::generatePos(int index, std::string filename) {
+    const std::vector<int> posBefore = symbolsPerFile.at(filename)[index - 1].getPosizione();
+    const std::vector<int> posAfter = symbolsPerFile.at(filename)[index].getPosizione();
+    std::vector<int> newPos;
+    return generatePosBetween(posBefore, posAfter, newPos);
+}
+
+std::vector<int> Server::generatePosBetween(std::vector<int> pos1, std::vector<int> pos2, std::vector<int> newPos) {
+    int id1 = pos1.at(0);
+    int id2 = pos2.at(0);
+
+    if (id2 - id1 == 0) { // [1] [1 0] or [1 0] [1 1]
+        newPos.push_back(id1);
+        pos1.erase(pos1.begin());
+        pos2.erase(pos2.begin());
+        if (pos1.empty()) {
+            newPos.push_back(pos2.front() - 1); // [1] [1 0] -> [1 -1]
+            return newPos;
+        } else
+            return generatePosBetween(pos1, pos2, newPos); // [1 0] [1 1] -> recall and enter third if
+    } else if (id2 - id1 > 1) { // [0] [3]
+        newPos.push_back(pos1.front() + 1); // [0] [3] -> [1]
+        return newPos;
+    } else if (id2 - id1 == 1) { // [1] [2] or [1 1] [2]
+        newPos.push_back(id1);
+        pos1.erase(pos1.begin());
+        if (pos1.empty()) {
+            newPos.push_back(0); // [1] [2] -> [1 0]
+            return newPos;
+        } else {
+            newPos.push_back(pos1.front() + 1); // [1 1] [2] -> [1 2]
+            return newPos;
+        }
+    }
 }

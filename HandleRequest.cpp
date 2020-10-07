@@ -64,12 +64,12 @@ void HandleRequest::do_read_body() {
                                     }
                                     std::string requestType = messageFromClient.at("operation").get<std::string>();
                                     std::string response;
-                                    try {
+                                    //try {
                                         response = handleRequestType(messageFromClient, requestType);
-                                    } catch (...) {
+                                    /*} catch (...) {
                                         std::cout << "handleRequest ERROR: " << errno << std::endl;
                                         sendAtClient(json{{"response", "handleRequest ERROR"}}.dump());
-                                    }
+                                    }*/
 
                                     do_read_header();
                                 } else {
@@ -306,34 +306,43 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         sendAtClient(j.dump());
         return j.dump();
     } else if (type_request == "insert") {
-        std::pair<int, char> message = js.at("corpo").get<std::pair<int, char >>();
-        std::string currentFile = this->getCurrentFile();
-        MessageSymbol messS = Server::getInstance().insertSymbol(currentFile, message.first, message.second,
-                                                                 shared_from_this()->getId());
-        std::pair<int, char> corpo(messS.getNewIndex(), message.second);
+        Symbol newSymbol(js.at("char").get<char>(), js.at("username").get<std::string>(),
+                         js.at("crdt").get<std::vector<int>>());
+
+        int newIndex = Server::getInstance().generateIndexCRDT(newSymbol, shared_from_this()->getCurrentFile(), 0, -1,
+                                                               -1);
+
+        Server::getInstance().insertSymbolIndex(newSymbol, newIndex, shared_from_this()->getCurrentFile());
+
         //salvataggio su file
         Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false);
 
         json j = json{{"response",    "insert_res"},
                       {"participant", shared_from_this()->getId()},
-                      {"corpo",       corpo}};
+                      {"username",    js.at("username").get<std::string>()},
+                      {"char",        js.at("char").get<char>()},
+                      {"crdt",        js.at("crdt").get<std::vector<int>>()}};
         sendAllClient(j.dump(), shared_from_this()->getId());
         return j.dump();
 
     } else if (type_request == "remove") {
-        int startIndex = js.at("start").get<int>();
-        int endIndex = js.at("end").get<int>();
-        std::string currentFile = this->getCurrentFile();
-        MessageSymbol messS = Server::getInstance().eraseSymbol(currentFile, startIndex, endIndex,
-                                                                shared_from_this()->getId());
+        Symbol symbolStart(js.at("charStart").get<char>(), js.at("usernameStart").get<std::string>(),
+                           js.at("crdtStart").get<std::vector<int>>());
+        Symbol symbolEnd(js.at("charEnd").get<char>(), js.at("usernameEnd").get<std::string>(),
+                         js.at("crdtEnd").get<std::vector<int>>());
+
+        Server::getInstance().eraseSymbolCRDT(symbolStart, symbolEnd, shared_from_this()->getCurrentFile());
 
         //salvataggio su file
         Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false);
 
-        json j = json{{"response",    "remove_res"},
-                      {"participant", shared_from_this()->getId()},
-                      {"start",       startIndex},
-                      {"end",         endIndex}};
+        json j = json{{"response", "remove_res"},
+                      {"usernameStart", symbolStart.getUsername()},
+                      {"charStart", symbolStart.getCharacter()},
+                      {"crdtStart", symbolStart.getPosizione()},
+                      {"usernameEnd", symbolEnd.getUsername()},
+                      {"charEnd", symbolEnd.getCharacter()},
+                      {"crdtEnd", symbolEnd.getPosizione()}};
         sendAllClient(j.dump(), shared_from_this()->getId());
         return j.dump();
     } else if (type_request == "request_new_file") {
@@ -478,10 +487,11 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                                   {"toWrite",       toWriteString}};
                     // scrive Symbol nel file nella mappa della room
                     for (int k = 0; k < toWriteString.length(); k++) {
-                        MessageSymbol messageInsertedSymbol = Server::getInstance().insertSymbol(filename,
-                                                                                                 (i * maxBuffer) + k,
-                                                                                                 toWriteString[k],
-                                                                                                 shared_from_this()->getId());
+                        Server::getInstance().insertSymbolNewCRDT(
+                                (i * maxBuffer) + k,
+                                toWriteString[k],
+                                shared_from_this()->getUsername(),
+                                filename);
                     }
 
                     sendAtClient(j.dump());
@@ -498,10 +508,10 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                               {"toWrite",       toWriteString}};
                 // scrive Symbol nel file nella mappa della room
                 for (int k = 0; k < toWriteString.length(); k++) {
-                    MessageSymbol messageInsertedSymbol = Server::getInstance().insertSymbol(filename,
-                                                                                             (of * maxBuffer) + k,
-                                                                                             toWriteString[k],
-                                                                                             shared_from_this()->getId());
+                    Server::getInstance().insertSymbolNewCRDT((i * maxBuffer) + k,
+                                                              toWriteString[k],
+                                                              shared_from_this()->getUsername(),
+                                                              filename);
                 }
                 sendAtClient(j.dump());
             }
@@ -637,10 +647,9 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                           {"name",     js.at("name").get<std::string>()},
                           {"username", js.at("username").get<std::string>()},
                           {"owner",    js.at("owner").get<std::string>()}};
-            if(invited.empty()) {
+            if (invited.empty()) {
                 sendAtClient(j.dump()); //cancellazione invito
-            }
-            else
+            } else
                 for (auto &invitedUsername : invited)
                     sendAtParticipant(j.dump(), invitedUsername);
 

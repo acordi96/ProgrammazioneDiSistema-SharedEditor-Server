@@ -13,23 +13,29 @@
 class Symbol {
 private:
     char character;
-    //contiene l'identificativo del client e il contatore con il numero di inserimenti fatti
-    std::pair<int, int> idUser;
+    std::string username;
     std::vector<int> posizione;
 public:
-    Symbol(char car, std::pair<int, int> id, std::vector<int> pos);
+    Symbol(char car, std::string usr, std::vector<int> pos);
+    Symbol();
 
-    const std::vector<int> &getPosizione() const;
+    bool operator==(const Symbol& s2);
 
-    void setPosizione(const std::vector<int> &posizione);
+    void operator=(const Symbol& s2);
 
-    const std::pair<int, int> &getIdUser() const;
+    std::string toStdString();
 
-    void setIdUser(const std::pair<int, int> &idUser);
+    std::vector<int> getPosizione();
 
-    char getCharacter() const;
+    void setPosizione(const std::vector<int> &pos);
 
-    void setCharacter(char character);
+    std::string getUsername();
+
+    void setUsername(std::string usr);
+
+    char getCharacter();
+
+    void setCharacter(char ch);
 
 };
 

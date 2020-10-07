@@ -9,22 +9,20 @@
 
 class MessageSymbol {
 private:
-    int type; //inserimento,ccancellazione
-    int partecipantId; //id del tipo
+    int type; //inserimento 0, cancellazione 1
+    std::string username;
     int newIndex;
     Symbol symbol;
 public:
-    MessageSymbol(int type, int partecipantId, Symbol s);
-    MessageSymbol(int type, Symbol s);
-    MessageSymbol(int type, int partecipantId, Symbol s, int newIndex);
+    MessageSymbol(int type, std::string usr, Symbol s);
 
     int getType() const;
     void setType(int type);
 
-    int getId() const;
-    void setId(int id);
+    std::string getUsername() const;
+    void setUsername(std::string);
 
-    const Symbol &getSymbol() const;
+    Symbol getSymbol();
     void setSymbol(const Symbol &symbol);
 
     int getNewIndex() const;
