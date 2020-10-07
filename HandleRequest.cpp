@@ -490,7 +490,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                         Server::getInstance().insertSymbolNewCRDT(
                                 (i * maxBuffer) + k,
                                 toWriteString[k],
-                                shared_from_this()->getUsername(),
+                                "",
                                 filename);
                     }
 
@@ -510,7 +510,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 for (int k = 0; k < toWriteString.length(); k++) {
                     Server::getInstance().insertSymbolNewCRDT((i * maxBuffer) + k,
                                                               toWriteString[k],
-                                                              shared_from_this()->getUsername(),
+                                                              "",
                                                               filename);
                 }
                 sendAtClient(j.dump());

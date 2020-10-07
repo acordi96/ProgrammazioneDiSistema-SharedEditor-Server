@@ -23,12 +23,6 @@ bool Symbol::operator==(const Symbol &s2) {
     return false;
 }
 
-void Symbol::operator=(const Symbol &s2) {
-    this->posizione = s2.posizione;
-    this->username = s2.username;
-    this->character = s2.character;
-}
-
 std::string Symbol::toStdString() {
     std::string out;
     out += "[" + Symbol::username + ", " + Symbol::character + "' ";

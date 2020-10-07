@@ -7,7 +7,7 @@
 #include "Headers/Server.h"
 #include "Headers/SocketManager.h"
 
-#define nModsBeforeWrite 1 //numero di modifiche per modificare il file (>0)
+#define nModsBeforeWrite 50 //numero di modifiche prima di modificare il file (>0)
 
 Server::~Server() {
     std::vector<std::string> openFiles;
@@ -201,7 +201,7 @@ int Server::getOutputcount() {
     return this->countOutput++;
 }
 
-MessageSymbol
+void
 Server::insertSymbolNewCRDT(int index, char character, const std::string &username, const std::string &filename) {
     std::vector<int> vector;
     if (this->symbolsPerFile.at(filename).empty()) {
@@ -217,29 +217,29 @@ Server::insertSymbolNewCRDT(int index, char character, const std::string &userna
     Symbol s(character, username, vector);
 
     this->symbolsPerFile.at(filename).insert(this->symbolsPerFile.at(filename).begin() + index, s);
-
-    MessageSymbol m(0, username, s);
-
-    return m;
 }
+
 //inserisci symbol gia' generato in un vettore di symbol nel posto giusto
 int Server::generateIndexCRDT(Symbol symbol, const std::string &filename, int iter, int start, int end) {
-    if(start == -1 && end == -1) {
-        if(symbol.getPosizione()[0] < this->symbolsPerFile.at(filename)[0].getPosizione()[0])
+    if (start == -1 && end == -1) {
+        if (this->symbolsPerFile.at(filename).empty())
+            return 0;
+        if (symbol.getPosizione()[0] < this->symbolsPerFile.at(filename)[0].getPosizione()[0])
             return 0;
         start = 0;
         end = this->symbolsPerFile.at(filename).size();
     }
-    if(start == end) {
+    if (start == end) {
         return iter;
     }
     int newStart = -1;
     int newEnd = start;
-    for(auto iterPositions = this->symbolsPerFile.at(filename).begin() + start; iterPositions != this->symbolsPerFile.at(filename).begin() + end; ++iterPositions) {
-        if(iterPositions->getPosizione().size() > iter && symbol.getPosizione().size() > iter) {
-            if(iterPositions->getPosizione()[iter] == symbol.getPosizione()[iter] && newStart == -1)
+    for (auto iterPositions = this->symbolsPerFile.at(filename).begin() + start;
+         iterPositions != this->symbolsPerFile.at(filename).begin() + end; ++iterPositions) {
+        if (iterPositions->getPosizione().size() > iter && symbol.getPosizione().size() > iter) {
+            if (iterPositions->getPosizione()[iter] == symbol.getPosizione()[iter] && newStart == -1)
                 newStart = newEnd;
-            if(iterPositions->getPosizione()[iter] > symbol.getPosizione()[iter]) {
+            if (iterPositions->getPosizione()[iter] > symbol.getPosizione()[iter]) {
                 if (newStart == -1)
                     return newEnd;
                 else
@@ -251,10 +251,11 @@ int Server::generateIndexCRDT(Symbol symbol, const std::string &filename, int it
     return newEnd;
 }
 
-void Server::insertSymbolIndex(const Symbol& symbol, int index, const std::string& filename) {
+void Server::insertSymbolIndex(const Symbol &symbol, int index, const std::string &filename) {
     int i = 0;
-    for(auto iterPositions = this->symbolsPerFile.at(filename).begin(); iterPositions != this->symbolsPerFile.at(filename).end(); ++iterPositions) {
-        if(index == i) {
+    for (auto iterPositions = this->symbolsPerFile.at(filename).begin();
+         iterPositions != this->symbolsPerFile.at(filename).end(); ++iterPositions) {
+        if (index == i) {
             this->symbolsPerFile.at(filename).insert(iterPositions, symbol);
             return;
         }
@@ -263,17 +264,22 @@ void Server::insertSymbolIndex(const Symbol& symbol, int index, const std::strin
     this->symbolsPerFile.at(filename).insert(this->symbolsPerFile.at(filename).end(), symbol);
 }
 
-void Server::eraseSymbolCRDT(Symbol symbolStart, Symbol symbolEnd, const std::string& filename) {
+void Server::eraseSymbolCRDT(Symbol symbolStart, Symbol symbolEnd, const std::string &filename) {
+    if (this->symbolsPerFile.at(filename)[0] == symbolStart &&
+        this->symbolsPerFile.at(filename)[this->symbolsPerFile.at(filename).size() - 1] == symbolEnd) {
+        this->symbolsPerFile.at(filename).clear();
+        return;
+    }
     bool foundStart = false;
-    for(auto iter = this->symbolsPerFile.at(filename).begin(); iter != this->symbolsPerFile.at(filename).end(); ++iter) {
-        if(*iter == symbolEnd) {
-            if(symbolStart == symbolEnd)
-                this->symbolsPerFile.at(filename).erase(iter);
+    for (auto iter = this->symbolsPerFile.at(filename).begin();
+         iter != this->symbolsPerFile.at(filename).end(); ++iter) {
+        if (*iter == symbolEnd) {
+            this->symbolsPerFile.at(filename).erase(iter);
             return;
         }
-        if(symbolStart == *iter)
+        if (symbolStart == *iter)
             foundStart = true;
-        if(foundStart) {
+        if (foundStart) {
             this->symbolsPerFile.at(filename).erase(iter);
             iter--;
         }

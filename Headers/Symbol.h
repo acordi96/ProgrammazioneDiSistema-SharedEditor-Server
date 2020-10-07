@@ -21,8 +21,6 @@ public:
 
     bool operator==(const Symbol& s2);
 
-    void operator=(const Symbol& s2);
-
     std::string toStdString();
 
     std::vector<int> getPosizione();
