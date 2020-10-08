@@ -7,7 +7,7 @@
 #include "Headers/Server.h"
 #include "Headers/SocketManager.h"
 
-#define nModsBeforeWrite 50 //numero di modifiche prima di modificare il file (>0)
+#define nModsBeforeWrite 1 //numero di modifiche prima di modificare il file (>0)
 
 Server::~Server() {
     std::vector<std::string> openFiles;
@@ -264,24 +264,32 @@ void Server::insertSymbolIndex(const Symbol &symbol, int index, const std::strin
     this->symbolsPerFile.at(filename).insert(this->symbolsPerFile.at(filename).end(), symbol);
 }
 
-void Server::eraseSymbolCRDT(Symbol symbolStart, Symbol symbolEnd, const std::string &filename) {
-    if (this->symbolsPerFile.at(filename)[0] == symbolStart &&
-        this->symbolsPerFile.at(filename)[this->symbolsPerFile.at(filename).size() - 1] == symbolEnd) {
-        this->symbolsPerFile.at(filename).clear();
-        return;
-    }
-    bool foundStart = false;
-    for (auto iter = this->symbolsPerFile.at(filename).begin();
-         iter != this->symbolsPerFile.at(filename).end(); ++iter) {
-        if (*iter == symbolEnd) {
-            this->symbolsPerFile.at(filename).erase(iter);
-            return;
+void Server::eraseSymbolCRDT(std::vector<Symbol> symbolsToErase, const std::string &filename) {
+    int lastFound = 0;
+    int missed = 0;
+    for(auto iterSymbolsToErase = symbolsToErase.begin(); iterSymbolsToErase != symbolsToErase.end(); ++iterSymbolsToErase) {
+        int count = lastFound;
+        if((lastFound - 2) >= 0)
+            lastFound -= 2;
+        bool foundSecondPart = false;
+        for(auto iterSymbols = this->symbolsPerFile.at(filename).begin() + lastFound; iterSymbols != this->symbolsPerFile.at(filename).end(); ++iterSymbols) { //cerca prima da dove hai trovato prima in poi
+            if(*iterSymbolsToErase == *iterSymbols) {
+                this->symbolsPerFile.at(filename).erase(iterSymbols);
+                lastFound = count;
+                foundSecondPart = true;
+                break;
+            }
+            count++;
         }
-        if (symbolStart == *iter)
-            foundStart = true;
-        if (foundStart) {
-            this->symbolsPerFile.at(filename).erase(iter);
-            iter--;
+        if(!foundSecondPart) { //se non hai trovato cerca anche nella prima parte
+            for(auto iterSymbols = this->symbolsPerFile.at(filename).begin(); iterSymbols != this->symbolsPerFile.at(filename).begin() + lastFound; ++iterSymbols) {
+                if(*iterSymbolsToErase == *iterSymbols) {
+                    this->symbolsPerFile.at(filename).erase(iterSymbols);
+                    lastFound = count;
+                    break;
+                }
+                count++;
+            }
         }
     }
 }

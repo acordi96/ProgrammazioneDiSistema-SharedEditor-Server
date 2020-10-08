@@ -52,7 +52,7 @@ public:
 
     int generateIndexCRDT(Symbol symbol, const std::string& filename, int iter, int start, int end);
 
-    void eraseSymbolCRDT(Symbol symbolStart, Symbol symbolEnd, const std::string& filename);
+    void eraseSymbolCRDT(std::vector<Symbol> symbolsToErase, const std::string& filename);
 
     void insertSymbolIndex(const Symbol& symbol, int index, const std::string& filename);
 

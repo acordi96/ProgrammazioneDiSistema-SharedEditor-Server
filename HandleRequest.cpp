@@ -12,7 +12,7 @@
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "InfiniteRecursion"
 
-#define maxBuffer 5000
+#define maxBufferChar 5000
 
 HandleRequest::HandleRequest(tcp::socket socket) : socket(std::move(socket)) {}
 
@@ -65,7 +65,7 @@ void HandleRequest::do_read_body() {
                                     std::string requestType = messageFromClient.at("operation").get<std::string>();
                                     std::string response;
                                     //try {
-                                        response = handleRequestType(messageFromClient, requestType);
+                                    response = handleRequestType(messageFromClient, requestType);
                                     /*} catch (...) {
                                         std::cout << "handleRequest ERROR: " << errno << std::endl;
                                         sendAtClient(json{{"response", "handleRequest ERROR"}}.dump());
@@ -326,23 +326,25 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         return j.dump();
 
     } else if (type_request == "remove") {
-        Symbol symbolStart(js.at("charStart").get<char>(), js.at("usernameStart").get<std::string>(),
-                           js.at("crdtStart").get<std::vector<int>>());
-        Symbol symbolEnd(js.at("charEnd").get<char>(), js.at("usernameEnd").get<std::string>(),
-                         js.at("crdtEnd").get<std::vector<int>>());
+        //prendo il vettore di symbol
+        std::vector<Symbol> symbolsToErase;
+        std::vector<std::string> usernameToErase = js.at("usernameToErase").get<std::vector<std::string>>();
+        std::vector<char> charToErase = js.at("charToErase").get<std::vector<char>>();
+        std::vector<std::vector<int>> crdtToErase = js.at("crdtToErase").get<std::vector<std::vector<int>>>();
+        for (int i = 0; i < usernameToErase.size(); i++)
+            symbolsToErase.emplace_back(charToErase[i], usernameToErase[i], crdtToErase[i]);
+        //cancello dal crdt symbols compresi tra i due e prendo indici
 
-        Server::getInstance().eraseSymbolCRDT(symbolStart, symbolEnd, shared_from_this()->getCurrentFile());
+        Server::getInstance().eraseSymbolCRDT(symbolsToErase, shared_from_this()->getCurrentFile());
 
         //salvataggio su file
-        Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false);
+        for(int i = 0; i < symbolsToErase.size(); i++)
+            Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false);
 
         json j = json{{"response", "remove_res"},
-                      {"usernameStart", symbolStart.getUsername()},
-                      {"charStart", symbolStart.getCharacter()},
-                      {"crdtStart", symbolStart.getPosizione()},
-                      {"usernameEnd", symbolEnd.getUsername()},
-                      {"charEnd", symbolEnd.getCharacter()},
-                      {"crdtEnd", symbolEnd.getPosizione()}};
+                      {"usernameToErase", usernameToErase},
+                      {"charToErase", charToErase},
+                      {"crdtToErase", crdtToErase}};
         sendAllClient(j.dump(), shared_from_this()->getId());
         return j.dump();
     } else if (type_request == "request_new_file") {
@@ -440,16 +442,16 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 std::cout << SocketManager::output() << "CLIENT " << this->getId() << " ("
                           << this->getUsername() << ") OPEN (NOT NEW) FILE (" << dim << " char): " << filename
                           << std::endl;
-                int of = dim / maxBuffer;
+                int of = dim / maxBufferChar;
                 int i = 0;
                 std::string toWrite;
-                while ((i + 1) * maxBuffer < dim) {
+                while ((i + 1) * maxBufferChar <= dim) {
                     toWrite.clear();
-                    for (int k = 0; k < maxBuffer; k++) {
-                        toWrite.push_back(symbols[(i * maxBuffer) + k].getCharacter());
+                    for (int k = 0; k < maxBufferChar; k++) {
+                        toWrite.push_back(symbols[(i * maxBufferChar) + k].getCharacter());
                     }
                     json j = json{{"response",      "open_file"},
-                                  {"maxBuffer", maxBuffer},
+                                  {"maxBuffer", maxBufferChar},
                                   {"partToWrite",   i},
                                   {"ofPartToWrite", of},
                                   {"toWrite",       toWrite}};
@@ -457,11 +459,11 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                     i++;
                 }
                 toWrite.clear();
-                for (int k = 0; k < (dim % maxBuffer); k++) {
-                    toWrite.push_back(symbols[(of * maxBuffer) + k].getCharacter());
+                for (int k = 0; k < (dim % maxBufferChar); k++) {
+                    toWrite.push_back(symbols[(of * maxBufferChar) + k].getCharacter());
                 }
                 json j = json{{"response",      "open_file"},
-                              {"maxBuffer", maxBuffer},
+                              {"maxBufferChar", maxBufferChar},
                               {"partToWrite",   of},
                               {"ofPartToWrite", of},
                               {"toWrite",       std::string(toWrite)}};
@@ -474,21 +476,21 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 int dim = in.tellg();
                 std::cout << SocketManager::output() << "CLIENT " << this->getId() << " ("
                           << this->getUsername() << ") OPEN (NEW) FILE (" << dim << " char): " << filename << std::endl;
-                char toWrite[maxBuffer];
-                int of = dim / maxBuffer;
+                char toWrite[maxBufferChar];
+                int of = dim / maxBufferChar;
                 int i = 0;
-                while ((i + 1) * maxBuffer < dim) {
-                    file.read(toWrite, maxBuffer);
+                while ((i + 1) * maxBufferChar <= dim) {
+                    file.read(toWrite, maxBufferChar);
                     std::string toWriteString = toWrite;
                     json j = json{{"response",      "open_file"},
-                                  {"maxBuffer", maxBuffer},
+                                  {"maxBufferChar", maxBufferChar},
                                   {"partToWrite",   i},
                                   {"ofPartToWrite", of},
                                   {"toWrite",       toWriteString}};
                     // scrive Symbol nel file nella mappa della room
                     for (int k = 0; k < toWriteString.length(); k++) {
                         Server::getInstance().insertSymbolNewCRDT(
-                                (i * maxBuffer) + k,
+                                (i * maxBufferChar) + k,
                                 toWriteString[k],
                                 "",
                                 filename);
@@ -497,18 +499,18 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                     sendAtClient(j.dump());
                     i++;
                 }
-                char toWrite2[(dim % maxBuffer) + 1];
-                file.read(toWrite2, dim % maxBuffer);
+                char toWrite2[(dim % maxBufferChar) + 1];
+                file.read(toWrite2, dim % maxBufferChar);
                 std::string toWriteString = toWrite2;
-                toWriteString.erase((dim % maxBuffer));
+                toWriteString.erase((dim % maxBufferChar));
                 json j = json{{"response",      "open_file"},
-                              {"maxBuffer", maxBuffer},
+                              {"maxBufferChar", maxBufferChar},
                               {"partToWrite",   of},
                               {"ofPartToWrite", of},
                               {"toWrite",       toWriteString}};
                 // scrive Symbol nel file nella mappa della room
                 for (int k = 0; k < toWriteString.length(); k++) {
-                    Server::getInstance().insertSymbolNewCRDT((i * maxBuffer) + k,
+                    Server::getInstance().insertSymbolNewCRDT((i * maxBufferChar) + k,
                                                               toWriteString[k],
                                                               "",
                                                               filename);
