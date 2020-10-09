@@ -48,7 +48,7 @@ public:
 
     std::vector<participant_ptr> getParticipantsInFile(const std::string &filename);
 
-    void insertSymbolNewCRDT(int index, char character, const std::string& username, const std::string& filename);
+    std::vector<int> insertSymbolNewCRDT(int index, char character, const std::string& username, const std::string& filename);
 
     int generateIndexCRDT(Symbol symbol, const std::string& filename, int iter, int start, int end);
 

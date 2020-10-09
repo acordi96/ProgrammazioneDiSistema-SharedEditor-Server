@@ -12,7 +12,7 @@
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "InfiniteRecursion"
 
-#define maxBufferChar 5000
+#define maxBufferChar 100
 
 HandleRequest::HandleRequest(tcp::socket socket) : socket(std::move(socket)) {}
 
@@ -466,29 +466,41 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                           << std::endl;
                 int of = dim / maxBufferChar;
                 int i = 0;
-                std::string toWrite;
+                std::vector<std::string> usernameToInsert;
+                std::vector<char> charToInsert;
+                std::vector<std::vector<int>> crdtToInsert;
                 while ((i + 1) * maxBufferChar <= dim) {
-                    toWrite.clear();
+                    usernameToInsert.clear();
+                    charToInsert.clear();
+                    crdtToInsert.clear();
                     for (int k = 0; k < maxBufferChar; k++) {
-                        toWrite.push_back(symbols[(i * maxBufferChar) + k].getCharacter());
+                        charToInsert.push_back(symbols[(i * maxBufferChar) + k].getCharacter());
+                        usernameToInsert.push_back(symbols[(i * maxBufferChar) + k].getUsername());
+                        crdtToInsert.push_back(symbols[(i * maxBufferChar) + k].getPosizione());
                     }
-                    json j = json{{"response",      "open_file"},
-                                  {"maxBuffer", maxBufferChar},
-                                  {"partToWrite",   i},
-                                  {"ofPartToWrite", of},
-                                  {"toWrite",       toWrite}};
+                    json j = json{{"response",         "open_file"},
+                                  {"partToWrite",      i},
+                                  {"ofPartToWrite",    of},
+                                  {"usernameToInsert", usernameToInsert},
+                                  {"charToInsert",     charToInsert},
+                                  {"crdtToInsert",     crdtToInsert}};
                     sendAtClient(j.dump());
                     i++;
                 }
-                toWrite.clear();
+                usernameToInsert.clear();
+                charToInsert.clear();
+                crdtToInsert.clear();
                 for (int k = 0; k < (dim % maxBufferChar); k++) {
-                    toWrite.push_back(symbols[(of * maxBufferChar) + k].getCharacter());
+                    charToInsert.push_back(symbols[(of * maxBufferChar) + k].getCharacter());
+                    usernameToInsert.push_back(symbols[(of * maxBufferChar) + k].getUsername());
+                    crdtToInsert.push_back(symbols[(of * maxBufferChar) + k].getPosizione());
                 }
-                json j = json{{"response",      "open_file"},
-                              {"maxBufferChar", maxBufferChar},
-                              {"partToWrite",   of},
-                              {"ofPartToWrite", of},
-                              {"toWrite",       std::string(toWrite)}};
+                json j = json{{"response",         "open_file"},
+                              {"partToWrite",      of},
+                              {"ofPartToWrite",    of},
+                              {"usernameToInsert", usernameToInsert},
+                              {"charToInsert",     charToInsert},
+                              {"crdtToInsert",     crdtToInsert}};
                 sendAtClient(j.dump());
             } else { //prima volta che il file viene aperto (lettura da file)
                 Server::getInstance().openFile(shared_from_this());
@@ -496,47 +508,57 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 file.open(filename);
                 std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
                 int dim = in.tellg();
+                dim--;
                 std::cout << SocketManager::output() << "CLIENT " << this->getId() << " ("
                           << this->getUsername() << ") OPEN (NEW) FILE (" << dim << " char): " << filename << std::endl;
                 char toWrite[maxBufferChar];
                 int of = dim / maxBufferChar;
                 int i = 0;
+                std::vector<std::string> usernameToInsert;
+                std::vector<char> charToInsert;
+                std::vector<std::vector<int>> crdtToInsert;
                 while ((i + 1) * maxBufferChar <= dim) {
+                    usernameToInsert.clear();
+                    charToInsert.clear();
+                    crdtToInsert.clear();
                     file.read(toWrite, maxBufferChar);
-                    std::string toWriteString = toWrite;
-                    json j = json{{"response",      "open_file"},
-                                  {"maxBufferChar", maxBufferChar},
-                                  {"partToWrite",   i},
-                                  {"ofPartToWrite", of},
-                                  {"toWrite",       toWriteString}};
-                    // scrive Symbol nel file nella mappa della room
-                    for (int k = 0; k < toWriteString.length(); k++) {
-                        Server::getInstance().insertSymbolNewCRDT(
-                                (i * maxBufferChar) + k,
-                                toWriteString[k],
-                                "",
-                                filename);
+                    for (int k = 0; k < maxBufferChar; k++) {
+                        std::vector<int> crdt = Server::getInstance().insertSymbolNewCRDT((i * maxBufferChar) + k,
+                                                                                          toWrite[k], "",
+                                                                                          shared_from_this()->getCurrentFile());
+                        charToInsert.push_back(toWrite[k]);
+                        usernameToInsert.push_back("");
+                        crdtToInsert.push_back(crdt);
                     }
-
+                    json j = json{{"response",         "open_file"},
+                                  {"partToWrite",      i},
+                                  {"ofPartToWrite",    of},
+                                  {"usernameToInsert", usernameToInsert},
+                                  {"charToInsert",     charToInsert},
+                                  {"crdtToInsert",     crdtToInsert}};
                     sendAtClient(j.dump());
                     i++;
                 }
+                usernameToInsert.clear();
+                charToInsert.clear();
+                crdtToInsert.clear();
                 char toWrite2[(dim % maxBufferChar) + 1];
                 file.read(toWrite2, dim % maxBufferChar);
-                std::string toWriteString = toWrite2;
-                toWriteString.erase((dim % maxBufferChar));
-                json j = json{{"response",      "open_file"},
-                              {"maxBufferChar", maxBufferChar},
-                              {"partToWrite",   of},
-                              {"ofPartToWrite", of},
-                              {"toWrite",       toWriteString}};
                 // scrive Symbol nel file nella mappa della room
-                for (int k = 0; k < toWriteString.length(); k++) {
-                    Server::getInstance().insertSymbolNewCRDT((i * maxBufferChar) + k,
-                                                              toWriteString[k],
-                                                              "",
-                                                              filename);
+                for (int k = 0; k < (dim % maxBufferChar); k++) {
+                    std::vector<int> crdt = Server::getInstance().insertSymbolNewCRDT((of * maxBufferChar) + k,
+                                                                                      toWrite2[k], "",
+                                                                                      shared_from_this()->getCurrentFile());
+                    charToInsert.push_back(toWrite2[k]);
+                    usernameToInsert.push_back("");
+                    crdtToInsert.push_back(crdt);
                 }
+                json j = json{{"response",         "open_file"},
+                              {"partToWrite",      of},
+                              {"ofPartToWrite",    of},
+                              {"usernameToInsert", usernameToInsert},
+                              {"charToInsert",     charToInsert},
+                              {"crdtToInsert",     crdtToInsert}};
                 sendAtClient(j.dump());
             }
             //aggiorna su ogni client lista di participant su questo file

@@ -7,7 +7,7 @@
 #include "Headers/Server.h"
 #include "Headers/SocketManager.h"
 
-#define nModsBeforeWrite 50 //numero di modifiche prima di modificare il file (>0)
+#define nModsBeforeWrite 1 //numero di modifiche prima di modificare il file (>0)
 
 Server::~Server() {
     std::vector<std::string> openFiles;
@@ -201,7 +201,7 @@ int Server::getOutputcount() {
     return this->countOutput++;
 }
 
-void
+std::vector<int>
 Server::insertSymbolNewCRDT(int index, char character, const std::string &username, const std::string &filename) {
     std::vector<int> vector;
     if (this->symbolsPerFile.at(filename).empty()) {
@@ -217,6 +217,8 @@ Server::insertSymbolNewCRDT(int index, char character, const std::string &userna
     Symbol s(character, username, vector);
 
     this->symbolsPerFile.at(filename).insert(this->symbolsPerFile.at(filename).begin() + index, s);
+
+    return vector;
 }
 
 //inserisci symbol gia' generato in un vettore di symbol nel posto giusto
@@ -267,13 +269,16 @@ void Server::insertSymbolIndex(const Symbol &symbol, int index, const std::strin
 void Server::eraseSymbolCRDT(std::vector<Symbol> symbolsToErase, const std::string &filename) {
     int lastFound = 0;
     int missed = 0;
-    for(auto iterSymbolsToErase = symbolsToErase.begin(); iterSymbolsToErase != symbolsToErase.end(); ++iterSymbolsToErase) {
+    for (auto iterSymbolsToErase = symbolsToErase.begin();
+         iterSymbolsToErase != symbolsToErase.end(); ++iterSymbolsToErase) {
         int count = lastFound;
-        if((lastFound - 2) >= 0)
+        if ((lastFound - 2) >= 0)
             lastFound -= 2;
         bool foundSecondPart = false;
-        for(auto iterSymbols = this->symbolsPerFile.at(filename).begin() + lastFound; iterSymbols != this->symbolsPerFile.at(filename).end(); ++iterSymbols) { //cerca prima da dove hai trovato prima in poi
-            if(*iterSymbolsToErase == *iterSymbols) {
+        for (auto iterSymbols = this->symbolsPerFile.at(filename).begin() + lastFound; iterSymbols !=
+                                                                                       this->symbolsPerFile.at(
+                                                                                               filename).end(); ++iterSymbols) { //cerca prima da dove hai trovato prima in poi
+            if (*iterSymbolsToErase == *iterSymbols) {
                 this->symbolsPerFile.at(filename).erase(iterSymbols);
                 lastFound = count;
                 foundSecondPart = true;
@@ -281,9 +286,10 @@ void Server::eraseSymbolCRDT(std::vector<Symbol> symbolsToErase, const std::stri
             }
             count++;
         }
-        if(!foundSecondPart) { //se non hai trovato cerca anche nella prima parte
-            for(auto iterSymbols = this->symbolsPerFile.at(filename).begin(); iterSymbols != this->symbolsPerFile.at(filename).begin() + lastFound; ++iterSymbols) {
-                if(*iterSymbolsToErase == *iterSymbols) {
+        if (!foundSecondPart) { //se non hai trovato cerca anche nella prima parte
+            for (auto iterSymbols = this->symbolsPerFile.at(filename).begin();
+                 iterSymbols != this->symbolsPerFile.at(filename).begin() + lastFound; ++iterSymbols) {
+                if (*iterSymbolsToErase == *iterSymbols) {
                     this->symbolsPerFile.at(filename).erase(iterSymbols);
                     lastFound = count;
                     break;
@@ -328,4 +334,5 @@ std::vector<int> Server::generatePosBetween(std::vector<int> pos1, std::vector<i
             return newPos;
         }
     }
+    return std::vector<int>();
 }
