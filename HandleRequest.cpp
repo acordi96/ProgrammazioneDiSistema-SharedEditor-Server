@@ -597,6 +597,9 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             sendAtClient(j.dump());
             return j.dump();
         }
+    } else if (type_request == "update_cursorPosition") {
+        sendAllClient(js.dump(), shared_from_this()->getId());
+        return js.dump();
     } else if (type_request == "update_icon") {
         /*std::string path = boost::filesystem::current_path().string();
         path = path.substr(0, path.find_last_of('/')); //esce da cartella cmake
