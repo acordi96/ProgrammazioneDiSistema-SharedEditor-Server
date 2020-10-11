@@ -46,9 +46,9 @@ void Server::deliverToAllOnFile(const Message &msg, const participant_ptr &parti
         recent_msgs_.pop_front();
 
     //non a tutti ma a tutti su quel file
-    for (const auto &p: this->participantsPerFile.at(participant->getCurrentFile())) {
-        if (p->getId() != participant->getId()) {
-            p->deliver(msg);
+    for (const auto &username: this->usernamePerFile.at(participant->getCurrentFile())) {
+        if (username != participant->getUsername()) {
+            participant->deliver(msg);
         }
     }
 }
@@ -57,14 +57,14 @@ void Server::send(const MessageSymbol &m) {
     infoMsgs_.push(m);
 }
 
-void Server::openFile(const participant_ptr &participant) {
+void Server::openFile(const std::string &filename, const std::string &username) {
     //inserisco entry in mappa dei simboli
     this->symbolsPerFile.emplace(
-            std::pair<std::string, std::vector<Symbol>>(participant->getCurrentFile(), std::vector<Symbol>()));
+            std::pair<std::string, std::vector<Symbol>>(filename, std::vector<Symbol>()));
     //inserisco entry in mappa delle modifiche
-    this->modsPerFile.emplace(std::pair<std::string, int>(participant->getCurrentFile(), 0));
+    this->modsPerFile.emplace(std::pair<std::string, int>(filename, 0));
     //aggiungo participant a lista participants del file
-    Server::getInstance().insertParticipantInFile(participant);
+    Server::getInstance().insertUsernameInFile(filename, username);
 }
 
 bool Server::isFileInFileSymbols(const std::string &filename) {
@@ -73,16 +73,16 @@ bool Server::isFileInFileSymbols(const std::string &filename) {
     return true;
 }
 
-void Server::insertParticipantInFile(const participant_ptr &participant) {
-    if (this->participantsPerFile.find(participant->getCurrentFile()) == this->participantsPerFile.end()) {
-        std::vector<participant_ptr> newVector;
-        newVector.push_back(participant);
-        this->participantsPerFile.insert(std::make_pair(participant->getCurrentFile(), newVector));
+void Server::insertUsernameInFile(const std::string &filename, const std::string &username) {
+    if (this->usernamePerFile.find(filename) == this->usernamePerFile.end()) {
+        std::vector<std::string> newVector;
+        newVector.push_back(username);
+        this->usernamePerFile.insert(std::make_pair(filename, newVector));
     } else {
-        for (auto &p : this->participantsPerFile.at(participant->getCurrentFile()))
-            if (p == participant)
+        for (auto &usr : this->usernamePerFile.at(filename))
+            if (usr == username)
                 return;
-        this->participantsPerFile.at(participant->getCurrentFile()).push_back(participant);
+        this->usernamePerFile.at(filename).push_back(username);
     }
 }
 
@@ -90,23 +90,23 @@ std::vector<Symbol> Server::getSymbolsPerFile(const std::string &filename) {
     return this->symbolsPerFile.at(filename);
 }
 
-std::vector<participant_ptr> Server::getParticipantsInFile(const std::string &filename) {
-    return this->participantsPerFile.at(filename);
+std::vector<std::string> Server::getUsernamesInFile(const std::string &filename) {
+    return this->usernamePerFile.at(filename);
 }
 
-bool Server::removeParticipantInFile(const std::string &filename, int id) {
-    for (auto it = this->participantsPerFile.at(filename).begin();
-         it != this->participantsPerFile.at(filename).end(); ++it) {
-        if (it->get()->getId() == id) {
-            this->participantsPerFile.at(filename).erase(it);
+bool Server::removeUsernameFromFile(const std::string &filename, const std::string& username) {
+    for (auto it = this->usernamePerFile.at(filename).begin();
+         it != this->usernamePerFile.at(filename).end(); ++it) {
+        if (*it == username) {
+            this->usernamePerFile.at(filename).erase(it);
             break;
         }
     }
-    if (this->participantsPerFile.at(filename).empty()) {    //se era l'unico/ultimo sul file
+    if (this->usernamePerFile.at(filename).empty()) {    //se era l'unico/ultimo sul file
         //forza scrittura su file
         this->modFile(filename, true);
         //dealloca strutture
-        this->participantsPerFile.erase(filename);
+        this->usernamePerFile.erase(filename);
         this->symbolsPerFile.erase(filename);
         this->modsPerFile.erase(filename);
         return true;
@@ -135,44 +135,27 @@ void Server::modFile(const std::string &filename, bool force) {
     }
 }
 
-std::vector<int> Server::closeFile(const participant_ptr &participant) {
-    std::vector<int> othersOnFile;
-    if (this->removeParticipantInFile(participant->getCurrentFile(),
-                                      participant->getId())) { //era l'ultimo sul file
+std::vector<std::string> Server::closeFile(const std::string& filename, const std::string &username) {
+    std::vector<std::string> othersOnFile;
+    if (this->removeUsernameFromFile(filename, username)) { //era l'ultimo sul file
         return othersOnFile;
     } else {
 //ci sono altri sul file, li informo della mia uscita
-        std::vector<participant_ptr> participantsOnFile = Server::getInstance().getParticipantsInFile(
-                participant->getCurrentFile());
-        for (const auto &participants : participantsOnFile) {
-            othersOnFile.push_back(participants->getId());
-        }
+        othersOnFile = Server::getInstance().getUsernamesInFile(filename);
         return othersOnFile;
     }
 }
 
-std::vector<std::string> Server::getColors(const std::vector<int> &users) {
+std::vector<std::string> Server::getColors(const std::vector<std::string> &usernames) {
     std::vector<std::string> colors;
-    for (auto &user : users) {
+    for (auto &user : usernames) {
         for (auto &participant : participants_) {
-            if (participant->getId() == user) {
+            if (participant->getUsername() == user) {
                 colors.emplace_back(participant->getColor());
             }
         }
     }
     return colors;
-}
-
-std::vector<std::string> Server::getUsernames(const std::vector<int> &users) {
-    std::vector<std::string> usernames;
-    for (auto &user : users) {
-        for (auto &participant : participants_) {
-            if (participant->getId() == user) {
-                usernames.emplace_back(participant->getUsername());
-            }
-        }
-    }
-    return usernames;
 }
 
 bool Server::isParticipantIn(int id) {
@@ -200,6 +183,8 @@ participant_ptr Server::getParticipant(const std::string &username) {
 int Server::getOutputcount() {
     return this->countOutput++;
 }
+
+/* ########################################### CRDT METHODS ########################################### */
 
 std::vector<int>
 Server::insertSymbolNewCRDT(int index, char character, const std::string &username, const std::string &filename) {

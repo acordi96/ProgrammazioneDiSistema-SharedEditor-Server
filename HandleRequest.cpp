@@ -230,7 +230,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         };
     } else if (type_request == "req_logout") {
         if (!shared_from_this()->getCurrentFile().empty()) {
-            std::vector<int> othersOnFile = Server::getInstance().closeFile(shared_from_this());
+            std::vector<std::string> othersOnFile = Server::getInstance().closeFile(shared_from_this()->getCurrentFile(), shared_from_this()->getUsername());
             if (othersOnFile.empty()) { //nessun altro sul file
                 std::cout << SocketManager::output() << "CLIENT "
                           << shared_from_this()->getId();
@@ -245,12 +245,9 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                           << shared_from_this()->getCurrentFile() << std::endl;
             } else { //altri sul file
                 std::vector<std::string> colors = Server::getInstance().getColors(othersOnFile);
-                std::vector<std::string> usernames = Server::getInstance().getUsernames(othersOnFile);
                 json j = json{{"response",   "update_participants"},
-                              {"idList",     othersOnFile},
-                              {"usernames",  usernames},
                               {"colorsList", colors},
-                              {"usernames",  usernames}};
+                              {"usernames",  othersOnFile}};
                 sendAllClient(j.dump(), shared_from_this()->getId());
                 std::cout << SocketManager::output() << "CLIENT "
                           << shared_from_this()->getId();
@@ -282,7 +279,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         Server::getInstance().leave(shared_from_this());
         return "logged_out";
     } else if (type_request == "close_file") {
-        std::vector<int> othersOnFile = Server::getInstance().closeFile(shared_from_this());
+        std::vector<std::string> othersOnFile = Server::getInstance().closeFile(shared_from_this()->getCurrentFile(), shared_from_this()->getUsername());
         if (othersOnFile.empty()) { //nessun altro sul file
             std::cout << SocketManager::output() << "CLIENT " << shared_from_this()->getId()
                       << " ("
@@ -290,10 +287,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                       << shared_from_this()->getCurrentFile() << std::endl;
         } else { //altri sul file
             std::vector<std::string> colors = Server::getInstance().getColors(othersOnFile);
-            std::vector<std::string> usernames = Server::getInstance().getUsernames(othersOnFile);
             json j = json{{"response",   "update_participants"},
-                          {"usernames",  usernames},
-                          {"idList",     othersOnFile},
+                          {"usernames",  othersOnFile},
                           {"colorsList", colors}};
             sendAtClient(j.dump());
             sendAllClient(j.dump(), shared_from_this()->getId());
@@ -418,7 +413,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                       << this->getUsername() << "): " << filename << std::endl;
 
             //stanzio le strutture
-            Server::getInstance().openFile(shared_from_this());
+            Server::getInstance().openFile(filename, shared_from_this()->getUsername());
 
             json j = json{{"response",   "new_file_created"},
                           {"filename",   js.at("name").get<std::string>()},
@@ -426,13 +421,12 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                                                                                    js.at("name").get<std::string>())}};
             sendAtClient(j.dump());
             //mando lista participant sul file (solo lui per ora)
-            std::vector<int> participantsOnFileId;
-            participantsOnFileId.push_back(shared_from_this()->getId());
-            std::vector<std::string> colors = Server::getInstance().getColors(participantsOnFileId);
-            std::vector<std::string> usernames = Server::getInstance().getUsernames(participantsOnFileId);
+            std::vector<std::string> usernameOnFile;
+            usernameOnFile.push_back(shared_from_this()->getUsername());
+            std::vector<std::string> colors;
+            colors.push_back(shared_from_this()->getColor());
             j = json{{"response",   "update_participants"},
-                     {"idList",     participantsOnFileId},
-                     {"usernames",  usernames},
+                     {"usernames",  usernameOnFile},
                      {"colorsList", colors}};
             sendAtClient(j.dump());
             sendAtClient(j.dump());
@@ -458,7 +452,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             if (Server::getInstance().isFileInFileSymbols(filename)) { //il file era gia' stato aperto (e' nella mappa)
 
                 //aggiungo participant a lista participants del file
-                Server::getInstance().insertParticipantInFile(shared_from_this());
+                Server::getInstance().insertUsernameInFile(filename, shared_from_this()->getUsername());
 
                 std::vector<Symbol> symbols = Server::getInstance().getSymbolsPerFile(filename);
                 int dim = symbols.size();
@@ -504,7 +498,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                               {"crdtToInsert",     crdtToInsert}};
                 sendAtClient(j.dump());
             } else { //prima volta che il file viene aperto (lettura da file)
-                Server::getInstance().openFile(shared_from_this());
+                Server::getInstance().openFile(filename, shared_from_this()->getUsername());
                 std::ifstream file;
                 file.open(filename);
                 std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
@@ -562,16 +556,10 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 sendAtClient(j.dump());
             }
             //aggiorna su ogni client lista di participant su questo file
-            std::vector<participant_ptr> participantsOnFile = Server::getInstance().getParticipantsInFile(filename);
-            std::vector<int> participantsOnFileId;
-            for (const auto &participant : participantsOnFile) {
-                participantsOnFileId.push_back(participant->getId());
-            }
-            std::vector<std::string> colors = Server::getInstance().getColors(participantsOnFileId);
-            std::vector<std::string> usernames = Server::getInstance().getUsernames(participantsOnFileId);
+            std::vector<std::string> usernamesInFile = Server::getInstance().getUsernamesInFile(filename);
+            std::vector<std::string> colors = Server::getInstance().getColors(usernamesInFile);
             json j = json{{"response",   "update_participants"},
-                          {"idList",     participantsOnFileId},
-                          {"usernames",  usernames},
+                          {"usernames",  usernamesInFile},
                           {"colorsList", colors}};
             sendAtClient(j.dump());
             sendAllClient(j.dump(), shared_from_this()->getId());

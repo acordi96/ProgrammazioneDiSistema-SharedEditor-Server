@@ -36,17 +36,17 @@ public:
 
     void send(const MessageSymbol &m);
 
-    void openFile(const participant_ptr &participant);
+    void openFile(const std::string &filename, const std::string &username);
 
-    std::vector<int> closeFile(const participant_ptr &participant);
+    std::vector<std::string> closeFile(const std::string& filename, const std::string &username);
 
     bool isFileInFileSymbols(const std::string &filename);
 
-    void insertParticipantInFile(const participant_ptr &participant);
+    void insertUsernameInFile(const std::string &filename, const std::string &username);
 
-    bool removeParticipantInFile(const std::string &filename, int id);
+    bool removeUsernameFromFile(const std::string &filename, const std::string& username);
 
-    std::vector<participant_ptr> getParticipantsInFile(const std::string &filename);
+    std::vector<std::string> getUsernamesInFile(const std::string &filename);
 
     std::vector<int> insertSymbolNewCRDT(int index, char character, const std::string& username, const std::string& filename);
 
@@ -64,9 +64,7 @@ public:
 
     void modFile(const std::string &filename, bool force);
 
-    std::vector<std::string> getColors(const std::vector<int> &users);
-
-    std::vector<std::string> getUsernames(const std::vector<int> &users);
+    std::vector<std::string> getColors(const std::vector<std::string> &usernames);
 
     bool isParticipantIn(int id);
 
@@ -90,7 +88,7 @@ private:
     unsigned int countOutput = 1;
 
     std::map<std::string, std::vector<Symbol>> symbolsPerFile;
-    std::map<std::string, std::vector<participant_ptr>> participantsPerFile;
+    std::map<std::string, std::vector<std::string>> usernamePerFile;
     std::map<std::string, int> modsPerFile;
 };
 
