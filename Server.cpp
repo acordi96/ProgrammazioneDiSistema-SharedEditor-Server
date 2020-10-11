@@ -19,6 +19,9 @@ Server::~Server() {
 
 Server &Server::getInstance() {
     static Server instance;
+    std::cout << "PARTICIPANT:" << std::endl;
+    for(auto &p : instance.participants_)
+        std::cout << "ID: " << std::to_string(p->getId()) << " USERNAME: " << p->getUsername() << " FILE: " << p->getCurrentFile() << std::endl;
     return instance;
 }
 
@@ -48,7 +51,7 @@ void Server::deliverToAllOtherOnFile(const Message &msg, const participant_ptr &
     //non a tutti ma a tutti su quel file
     for (const auto &username: this->usernamePerFile.at(participant->getCurrentFile())) {
         if (username != participant->getUsername()) {
-            participant->deliver(msg);
+            this->getParticipant(username)->deliver(msg);
         }
     }
 }
@@ -61,7 +64,7 @@ void Server::deliverToAllOnFile(const Message &msg, const participant_ptr &parti
 
     //non a tutti ma a tutti su quel file
     for (const auto &username: this->usernamePerFile.at(participant->getCurrentFile())) {
-        participant->deliver(msg);
+        this->getParticipant(username)->deliver(msg);
     }
 }
 
