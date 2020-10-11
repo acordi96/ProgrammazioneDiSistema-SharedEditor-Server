@@ -39,9 +39,11 @@ private:
 
     void sendAtClient(const std::string &response);
 
-    void sendAtParticipant(const std::string &response, const std::string &username);
+    void sendAtClientUsername(const std::string &response, const std::string &username);
 
-    void sendAllClient(const std::string &responde, const int &id);
+    void sendAllOtherClientsOnFile(const std::string &response);
+
+    void sendAllClientsOnFile(const std::string &response);
 
 public:
     void start(int paticipantId);

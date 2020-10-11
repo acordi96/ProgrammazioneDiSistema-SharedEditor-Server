@@ -32,6 +32,8 @@ public:
 
     void deliver(const Message &msg);
 
+    void deliverToAllOtherOnFile(const Message &msg, const participant_ptr &participant);
+
     void deliverToAllOnFile(const Message &msg, const participant_ptr &participant);
 
     void send(const MessageSymbol &m);

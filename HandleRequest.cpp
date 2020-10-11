@@ -99,11 +99,25 @@ void HandleRequest::sendAtClient(const std::string &j_string) {
 
 }
 
-void HandleRequest::sendAllClient(const std::string &j_string, const int &id) {
-    std::size_t len = j_string.size();
+void HandleRequest::sendAllOtherClientsOnFile(const std::string &response) {
+    std::size_t len = response.size();
     Message msg;
     msg.body_length(len);
-    std::memcpy(msg.body(), j_string.data(), msg.body_length());
+    std::memcpy(msg.body(), response.data(), msg.body_length());
+    msg.body()[msg.body_length()] = '\0';
+    msg.encode_header();
+    std::cout << SocketManager::output() << "RESPONSE TO ALL OTHER CLIENTS ON FILE "
+              << this->getCurrentFile() << ": "
+              << msg.body()
+              << std::endl;
+    Server::getInstance().deliverToAllOtherOnFile(msg, shared_from_this());
+}
+
+void HandleRequest::sendAllClientsOnFile(const std::string &response) {
+    std::size_t len = response.size();
+    Message msg;
+    msg.body_length(len);
+    std::memcpy(msg.body(), response.data(), msg.body_length());
     msg.body()[msg.body_length()] = '\0';
     msg.encode_header();
     std::cout << SocketManager::output() << "RESPONSE TO ALL CLIENTS ON FILE "
@@ -248,7 +262,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 json j = json{{"response",   "update_participants"},
                               {"colorsList", colors},
                               {"usernames",  othersOnFile}};
-                sendAllClient(j.dump(), shared_from_this()->getId());
+                sendAllOtherClientsOnFile(j.dump());
                 std::cout << SocketManager::output() << "CLIENT "
                           << shared_from_this()->getId();
                 if (shared_from_this()->getUsername() != "")
@@ -290,8 +304,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             json j = json{{"response",   "update_participants"},
                           {"usernames",  othersOnFile},
                           {"colorsList", colors}};
-            sendAtClient(j.dump());
-            sendAllClient(j.dump(), shared_from_this()->getId());
+            sendAllClientsOnFile(j.dump());
             std::cout << SocketManager::output() << "CLIENT " << shared_from_this()->getId()
                       << " ("
                       << shared_from_this()->getUsername() << ") CLOSE FILE: " << shared_from_this()->getCurrentFile()
@@ -318,7 +331,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                       {"username",    js.at("username").get<std::string>()},
                       {"char",        js.at("char").get<char>()},
                       {"crdt",        js.at("crdt").get<std::vector<int>>()}};
-        sendAllClient(j.dump(), shared_from_this()->getId());
+        sendAllOtherClientsOnFile(j.dump());
         return j.dump();
 
     } else if (type_request == "insert_paste") {
@@ -340,7 +353,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                       {"usernameToPaste", usernameToPaste},
                       {"charToPaste",     charToPaste},
                       {"crdtToPaste",     crdtToPaste}};
-        sendAllClient(j.dump(), shared_from_this()->getId());
+        sendAllOtherClientsOnFile(j.dump());
         return j.dump();
 
     } else if (type_request == "remove") {
@@ -363,7 +376,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                       {"usernameToErase", usernameToErase},
                       {"charToErase",     charToErase},
                       {"crdtToErase",     crdtToErase}};
-        sendAllClient(j.dump(), shared_from_this()->getId());
+        sendAllOtherClientsOnFile(j.dump());
         return j.dump();
     } else if (type_request == "request_new_file") {
 
@@ -428,7 +441,6 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             j = json{{"response",   "update_participants"},
                      {"usernames",  usernameOnFile},
                      {"colorsList", colors}};
-            sendAtClient(j.dump());
             sendAtClient(j.dump());
             return j.dump();
         } else {
@@ -561,8 +573,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             json j = json{{"response",   "update_participants"},
                           {"usernames",  usernamesInFile},
                           {"colorsList", colors}};
-            sendAtClient(j.dump());
-            sendAllClient(j.dump(), shared_from_this()->getId());
+            sendAllClientsOnFile(j.dump());
             return j.dump();
         } else {
             json j = json{{"response", "errore_apertura_file"}};
@@ -586,7 +597,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             return j.dump();
         }
     } else if (type_request == "update_cursorPosition") {
-        sendAllClient(js.dump(), shared_from_this()->getId());
+        sendAllOtherClientsOnFile(js.dump());
         return js.dump();
     } else if (type_request == "update_icon") {
         /*std::string path = boost::filesystem::current_path().string();
@@ -647,8 +658,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                           {"newName",  js.at("new_name").get<std::string>()},
                           {"oldName",  js.at("old_name").get<std::string>()},
                           {"owner",    shared_from_this()->getUsername()}};
-            for (auto &participant : invited)
-                sendAtParticipant(j.dump(), participant);
+            for (auto &usernameInvited : invited)
+                sendAtClientUsername(j.dump(), usernameInvited);
             return j.dump();
         } else {
             json j = json{{"response", "ERRORE_RINOMINA_FILE"}};
@@ -688,7 +699,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 sendAtClient(j.dump()); //cancellazione invito
             } else
                 for (auto &invitedUsername : invited)
-                    sendAtParticipant(j.dump(), invitedUsername);
+                    sendAtClientUsername(j.dump(), invitedUsername);
 
             return j.dump();
         } else {
@@ -714,7 +725,7 @@ void HandleRequest::deliver(const Message &msg) {
     }
 }
 
-void HandleRequest::sendAtParticipant(const std::string &response, const std::string &username) {
+void HandleRequest::sendAtClientUsername(const std::string &response, const std::string &username) {
     participant_ptr participant = Server::getInstance().getParticipant(username);
     if (participant == nullptr)
         return;

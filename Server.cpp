@@ -39,7 +39,7 @@ void Server::deliver(const Message &msg) {
         p->deliver(msg);
 }
 
-void Server::deliverToAllOnFile(const Message &msg, const participant_ptr &participant) {
+void Server::deliverToAllOtherOnFile(const Message &msg, const participant_ptr &participant) {
     recent_msgs_.push_back(msg);
 
     while (recent_msgs_.size() > max_recent_msgs)
@@ -50,6 +50,18 @@ void Server::deliverToAllOnFile(const Message &msg, const participant_ptr &parti
         if (username != participant->getUsername()) {
             participant->deliver(msg);
         }
+    }
+}
+
+void Server::deliverToAllOnFile(const Message &msg, const participant_ptr &participant) {
+    recent_msgs_.push_back(msg);
+
+    while (recent_msgs_.size() > max_recent_msgs)
+        recent_msgs_.pop_front();
+
+    //non a tutti ma a tutti su quel file
+    for (const auto &username: this->usernamePerFile.at(participant->getCurrentFile())) {
+        participant->deliver(msg);
     }
 }
 
@@ -94,7 +106,7 @@ std::vector<std::string> Server::getUsernamesInFile(const std::string &filename)
     return this->usernamePerFile.at(filename);
 }
 
-bool Server::removeUsernameFromFile(const std::string &filename, const std::string& username) {
+bool Server::removeUsernameFromFile(const std::string &filename, const std::string &username) {
     for (auto it = this->usernamePerFile.at(filename).begin();
          it != this->usernamePerFile.at(filename).end(); ++it) {
         if (*it == username) {
@@ -135,7 +147,7 @@ void Server::modFile(const std::string &filename, bool force) {
     }
 }
 
-std::vector<std::string> Server::closeFile(const std::string& filename, const std::string &username) {
+std::vector<std::string> Server::closeFile(const std::string &filename, const std::string &username) {
     std::vector<std::string> othersOnFile;
     if (this->removeUsernameFromFile(filename, username)) { //era l'ultimo sul file
         return othersOnFile;
