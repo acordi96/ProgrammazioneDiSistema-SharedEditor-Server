@@ -597,7 +597,11 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             return j.dump();
         }
     } else if (type_request == "update_cursorPosition") {
-        sendAllOtherClientsOnFile(js.dump());
+        json j = json{{"response", "update_cursorPosition"},
+                      {"username",    js.at("username").get<std::string>()},
+                      {"pos", js.at("pos").get<int>()}
+        };
+        sendAllClient(j.dump(),  shared_from_this()->getId());
         return js.dump();
     } else if (type_request == "update_icon") {
         /*std::string path = boost::filesystem::current_path().string();
