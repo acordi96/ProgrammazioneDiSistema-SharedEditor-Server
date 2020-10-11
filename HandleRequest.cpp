@@ -244,7 +244,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         };
     } else if (type_request == "req_logout") {
         if (!shared_from_this()->getCurrentFile().empty()) {
-            std::vector<std::string> othersOnFile = Server::getInstance().closeFile(shared_from_this()->getCurrentFile(), shared_from_this()->getUsername());
+            std::vector<std::string> othersOnFile = Server::getInstance().closeFile(
+                    shared_from_this()->getCurrentFile(), shared_from_this()->getUsername());
             if (othersOnFile.empty()) { //nessun altro sul file
                 std::cout << SocketManager::output() << "CLIENT "
                           << shared_from_this()->getId();
@@ -293,7 +294,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         Server::getInstance().leave(shared_from_this());
         return "logged_out";
     } else if (type_request == "close_file") {
-        std::vector<std::string> othersOnFile = Server::getInstance().closeFile(shared_from_this()->getCurrentFile(), shared_from_this()->getUsername());
+        std::vector<std::string> othersOnFile = Server::getInstance().closeFile(shared_from_this()->getCurrentFile(),
+                                                                                shared_from_this()->getUsername());
         if (othersOnFile.empty()) { //nessun altro sul file
             std::cout << SocketManager::output() << "CLIENT " << shared_from_this()->getId()
                       << " ("
@@ -598,10 +600,10 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         }
     } else if (type_request == "update_cursorPosition") {
         json j = json{{"response", "update_cursorPosition"},
-                      {"username",    js.at("username").get<std::string>()},
-                      {"pos", js.at("pos").get<int>()}
+                      {"username", js.at("username").get<std::string>()},
+                      {"pos",      js.at("pos").get<int>()}
         };
-        sendAllClient(j.dump(),  shared_from_this()->getId());
+        sendAllOtherClientsOnFile(j.dump());
         return js.dump();
     } else if (type_request == "update_icon") {
         /*std::string path = boost::filesystem::current_path().string();
