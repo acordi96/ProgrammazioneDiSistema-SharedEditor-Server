@@ -12,7 +12,7 @@
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "InfiniteRecursion"
 
-#define maxBufferSymbol 100
+#define maxBufferSymbol 150 //numero massimo di symbols mandati contemporaneamente
 
 HandleRequest::HandleRequest(tcp::socket socket) : socket(std::move(socket)) {}
 
@@ -32,9 +32,9 @@ void HandleRequest::do_read_header() {
                                     do_read_body();
                                 } else {
                                     if (Server::getInstance().isParticipantIn(shared_from_this()->getId())) {
-                                        handleRequestType(json{{"operation", "req_logout"},
-                                                               {"username",  ""}},
-                                                          "req_logout");
+                                        handleRequestType(json{{"operation", "req_logout_and_close"},
+                                                               {"username",  shared_from_this()->getUsername()}},
+                                                          "req_logout_and_close");
                                         Server::getInstance().leave(shared_from_this());
                                     }
                                 }
@@ -74,9 +74,9 @@ void HandleRequest::do_read_body() {
                                     do_read_header();
                                 } else {
                                     if (Server::getInstance().isParticipantIn(shared_from_this()->getId())) {
-                                        handleRequestType(json{{"operation", "req_logout"},
-                                                               {"username",  ""}},
-                                                          "req_logout");
+                                        handleRequestType(json{{"operation", "req_logout_and_close"},
+                                                               {"username",  shared_from_this()->getUsername()}},
+                                                          "req_logout_and_close");
                                         Server::getInstance().leave(shared_from_this());
                                     }
                                 }
@@ -283,16 +283,50 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             if (shared_from_this()->getUsername() != "")
                 std::cout << " ("
                           << shared_from_this()->getUsername() << ")";
-            if (js.at("username") != "") {
+            if (js.at("username") != "")
                 std::cout << " LOGOUT" << std::endl;
-                json j = json{{"response", "logged_out"}};
-                sendAtClient(j.dump());
-            } else
+            else
                 std::cout << " CLOSE" << std::endl;
+        }
+        shared_from_this()->setUsername("");
+        return "logged_out";
+    } else if (type_request == "req_logout_and_close") {
+        if (!shared_from_this()->getCurrentFile().empty()) {
+            std::vector<std::string> othersOnFile = Server::getInstance().closeFile(
+                    shared_from_this()->getCurrentFile(), shared_from_this()->getUsername());
+            if (othersOnFile.empty()) { //nessun altro sul file
+                std::cout << SocketManager::output() << "CLIENT "
+                          << shared_from_this()->getId();
+                if (shared_from_this()->getUsername() != "")
+                    std::cout << " ("
+                              << shared_from_this()->getUsername() << ")";
+                std::cout << " CLOSE AND FREE FILE: "
+                          << shared_from_this()->getCurrentFile() << std::endl;
+            } else { //altri sul file
+                std::vector<std::string> colors = Server::getInstance().getColors(othersOnFile);
+                json j = json{{"response",   "update_participants"},
+                              {"colorsList", colors},
+                              {"usernames",  othersOnFile}};
+                sendAllOtherClientsOnFile(j.dump());
+                std::cout << SocketManager::output() << "CLIENT "
+                          << shared_from_this()->getId();
+                if (shared_from_this()->getUsername() != "")
+                    std::cout << " ("
+                              << shared_from_this()->getUsername() << ")";
+                std::cout << " CLOSE, STILL OPENED FILE: "
+                          << shared_from_this()->getCurrentFile() << std::endl;
+            }
+            shared_from_this()->setCurrentFile("");
+        } else {
+            std::cout << SocketManager::output() << "CLIENT "
+                      << shared_from_this()->getId();
+            if (shared_from_this()->getUsername() != "")
+                std::cout << " ("
+                          << shared_from_this()->getUsername() << ")";
+            std::cout << " CLOSE" << std::endl;
         }
         //rimuovi partipipant
         Server::getInstance().leave(shared_from_this());
-        return "logged_out";
     } else if (type_request == "close_file") {
         std::vector<std::string> othersOnFile = Server::getInstance().closeFile(shared_from_this()->getCurrentFile(),
                                                                                 shared_from_this()->getUsername());
@@ -317,47 +351,26 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         sendAtClient(j.dump());
         return j.dump();
     } else if (type_request == "insert") {
-        Symbol newSymbol(js.at("char").get<char>(), js.at("username").get<std::string>(),
-                         js.at("crdt").get<std::vector<int>>());
-
-        int newIndex = Server::getInstance().generateIndexCRDT(newSymbol, shared_from_this()->getCurrentFile(), 0, -1,
-                                                               -1);
-
-        Server::getInstance().insertSymbolIndex(newSymbol, newIndex, shared_from_this()->getCurrentFile());
-
-        //salvataggio su file
-        Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false);
-
-        json j = json{{"response",    "insert_res"},
-                      {"participant", shared_from_this()->getId()},
-                      {"username",    js.at("username").get<std::string>()},
-                      {"char",        js.at("char").get<char>()},
-                      {"crdt",        js.at("crdt").get<std::vector<int>>()}};
-        sendAllOtherClientsOnFile(j.dump());
-        return j.dump();
-
-    } else if (type_request == "insert_paste") {
         //prendo il vettore di symbol
-        std::vector<std::string> usernameToPaste = js.at("usernameToPaste").get<std::vector<std::string>>();
-        std::vector<char> charToPaste = js.at("charToPaste").get<std::vector<char>>();
-        std::vector<std::vector<int>> crdtToPaste = js.at("crdtToPaste").get<std::vector<std::vector<int>>>();
-        for (int i = 0; i < usernameToPaste.size(); i++) {
+        std::vector<std::string> usernameToInsert = js.at("usernameToInsert").get<std::vector<std::string>>();
+        std::vector<char> charToInsert = js.at("charToInsert").get<std::vector<char>>();
+        std::vector<std::vector<int>> crdtToInsert = js.at("crdtToInsert").get<std::vector<std::vector<int>>>();
+        for (int i = 0; i < usernameToInsert.size(); i++) {
             //ricreo il simbolo
-            Symbol symbolToPaste(charToPaste[i], usernameToPaste[i], crdtToPaste[i]);
-            int index = Server::getInstance().generateIndexCRDT(symbolToPaste, shared_from_this()->getCurrentFile(), 0,
+            Symbol symbolToInsert(charToInsert[i], usernameToInsert[i], crdtToInsert[i]);
+            int index = Server::getInstance().generateIndexCRDT(symbolToInsert, shared_from_this()->getCurrentFile(), 0,
                                                                 -1, -1);
             //aggiungo al crdt
-            Server::getInstance().insertSymbolIndex(symbolToPaste, index, shared_from_this()->getCurrentFile());
+            Server::getInstance().insertSymbolIndex(symbolToInsert, index, shared_from_this()->getCurrentFile());
             Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false);
         }
 
-        json j = json{{"response",        "insert_paste_res"},
-                      {"usernameToPaste", usernameToPaste},
-                      {"charToPaste",     charToPaste},
-                      {"crdtToPaste",     crdtToPaste}};
+        json j = json{{"response",        "insert_res"},
+                      {"usernameToInsert", usernameToInsert},
+                      {"charToInsert",     charToInsert},
+                      {"crdtToInsert",     crdtToInsert}};
         sendAllOtherClientsOnFile(j.dump());
         return j.dump();
-
     } else if (type_request == "remove") {
         //prendo il vettore di symbol
         std::vector<Symbol> symbolsToErase;

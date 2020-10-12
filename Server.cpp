@@ -7,7 +7,7 @@
 #include "Headers/Server.h"
 #include "Headers/SocketManager.h"
 
-#define nModsBeforeWrite 1 //numero di modifiche prima di modificare il file (>0)
+#define nModsBeforeWrite 150 //numero di modifiche prima di modificare il file (>0)
 
 Server::~Server() {
     std::vector<std::string> openFiles;
@@ -19,18 +19,52 @@ Server::~Server() {
 
 Server &Server::getInstance() {
     static Server instance;
-    std::cout << "PARTICIPANT:" << std::endl;
-    for(auto &p : instance.participants_)
-        std::cout << "ID: " << std::to_string(p->getId()) << " USERNAME: " << p->getUsername() << " FILE: " << p->getCurrentFile() << std::endl;
     return instance;
 }
 
 void Server::join(const participant_ptr &participant) {
     participants_.insert(participant);
+    std::cout << SocketManager::output() << "PARTICIPANTS LIST UPDATED ("
+              << std::to_string(participants_.size())
+              << "): ";
+    for (auto &p : participants_) {
+        std::cout << "[ID: " << std::to_string(p->getId()) << ", USERNAME: ";
+        if(p->getUsername().empty())
+            std::cout << "''";
+        else
+            std::cout << p->getUsername();
+        std::cout << ", FILE: ";
+        if (p->getCurrentFile().empty())
+            std::cout << "(NO)], ";
+        else
+            std::cout << "(YES)], ";
+    }
+    std::cout << std::endl;
 }
 
 void Server::leave(const participant_ptr &participant) {
-    participants_.erase(participant);
+    for (auto &p : participants_) {
+        if (p == participant) {
+            participants_.erase(p);
+            std::cout << SocketManager::output() << "PARTICIPANTS LIST UPDATED ("
+                      << std::to_string(participants_.size())
+                      << "): ";
+            for (auto &p : participants_) {
+                std::cout << "[ID: " << std::to_string(p->getId()) << ", USERNAME: ";
+                if(p->getUsername().empty())
+                    std::cout << "''";
+                else
+                    std::cout << p->getUsername();
+                std::cout << ", FILE: ";
+                if (p->getCurrentFile().empty())
+                    std::cout << "(NO)], ";
+                else
+                    std::cout << "(YES)], ";
+            }
+            std::cout << std::endl;
+            return;
+        }
+    }
 }
 
 void Server::deliver(const Message &msg) {
