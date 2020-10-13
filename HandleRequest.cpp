@@ -353,7 +353,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
     } else if (type_request == "insert") {
         //prendo il vettore di symbol
         std::vector<std::string> usernameToInsert = js.at("usernameToInsert").get<std::vector<std::string>>();
-        std::vector<wchar_t > charToInsert = js.at("charToInsert").get<std::vector<wchar_t >>();
+        std::vector<char> charToInsert = js.at("charToInsert").get<std::vector<char>>();
         std::vector<std::vector<int>> crdtToInsert = js.at("crdtToInsert").get<std::vector<std::vector<int>>>();
         for (int i = 0; i < usernameToInsert.size(); i++) {
             //ricreo il simbolo
@@ -375,7 +375,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         //prendo il vettore di symbol
         std::vector<Symbol> symbolsToErase;
         std::vector<std::string> usernameToErase = js.at("usernameToErase").get<std::vector<std::string>>();
-        std::vector<wchar_t > charToErase = js.at("charToErase").get<std::vector<wchar_t >>();
+        std::vector<char> charToErase = js.at("charToErase").get<std::vector<char>>();
         std::vector<std::vector<int>> crdtToErase = js.at("crdtToErase").get<std::vector<std::vector<int>>>();
         for (int i = 0; i < usernameToErase.size(); i++)
             symbolsToErase.emplace_back(charToErase[i], usernameToErase[i], crdtToErase[i]);
@@ -489,7 +489,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 int of = dim / maxBufferSymbol;
                 int i = 0;
                 std::vector<std::string> usernameToInsert;
-                std::vector<wchar_t > charToInsert;
+                std::vector<char> charToInsert;
                 std::vector<std::vector<int>> crdtToInsert;
                 while ((i + 1) * maxBufferSymbol <= dim) {
                     usernameToInsert.clear();
@@ -536,7 +536,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 int of = dim / maxBufferSymbol;
                 int i = 0;
                 std::vector<std::string> usernameToInsert;
-                std::vector<char > charToInsert;
+                std::vector<char> charToInsert;
                 std::vector<std::vector<int>> crdtToInsert;
                 while ((i + 1) * maxBufferSymbol <= dim) {
                     usernameToInsert.clear();
@@ -544,7 +544,6 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                     crdtToInsert.clear();
                     file.read(toWrite, maxBufferSymbol);
                     for (int k = 0; k < maxBufferSymbol; k++) {
-
                         std::vector<int> crdt = Server::getInstance().insertSymbolNewCRDT((i * maxBufferSymbol) + k,
                                                                                           toWrite[k], "",
                                                                                           shared_from_this()->getCurrentFile());
@@ -617,8 +616,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                       {"username", js.at("username").get<std::string>()},
                       {"pos",      js.at("pos").get<int>()}
         };
-        //sendAllOtherClientsOnFile(j.dump());
-        sendAtClient(j.dump());
+        sendAllOtherClientsOnFile(j.dump());
         return js.dump();
     } else if (type_request == "update_icon") {
         /*std::string path = boost::filesystem::current_path().string();

@@ -50,7 +50,7 @@ public:
 
     std::vector<std::string> getUsernamesInFile(const std::string &filename);
 
-    std::vector<int> insertSymbolNewCRDT(int index, wchar_t character, const std::string& username, const std::string& filename);
+    std::vector<int> insertSymbolNewCRDT(int index, char character, const std::string& username, const std::string& filename);
 
     int generateIndexCRDT(Symbol symbol, const std::string& filename, int iter, int start, int end);
 

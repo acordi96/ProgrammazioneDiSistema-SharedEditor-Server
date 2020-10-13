@@ -12,11 +12,11 @@
 
 class Symbol {
 private:
-    wchar_t character;
+    char character;
     std::string username;
     std::vector<int> posizione;
 public:
-    Symbol(wchar_t car, std::string usr, std::vector<int> pos);
+    Symbol(char car, std::string usr, std::vector<int> pos);
     Symbol();
 
     bool operator==(const Symbol& s2);
@@ -31,9 +31,9 @@ public:
 
     void setUsername(std::string usr);
 
-    wchar_t getCharacter();
+    char getCharacter();
 
-    void setCharacter(wchar_t ch);
+    void setCharacter(char ch);
 
 };
 

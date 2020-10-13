@@ -6,7 +6,7 @@
 
 #include <utility>
 
-Symbol::Symbol(wchar_t car, std::string usr, std::vector<int> pos) : character(car), username(std::move(usr)),
+Symbol::Symbol(char car, std::string usr, std::vector<int> pos) : character(car), username(std::move(usr)),
                                                                   posizione(std::move(pos)) {
 
 }
@@ -25,20 +25,18 @@ bool Symbol::operator==(const Symbol &s2) {
 
 std::string Symbol::toStdString() {
     std::string out;
-    /*
     out += "[" + Symbol::username + ", " + Symbol::character + "' ";
     for(auto &i : Symbol::posizione)
         out += std::to_string(i);
     out += "]";
-     */
     return out;
 }
 
-wchar_t Symbol::getCharacter() {
+char Symbol::getCharacter() {
     return character;
 }
 
-void Symbol::setCharacter(wchar_t ch) {
+void Symbol::setCharacter(char ch) {
     this->character = ch;
 }
 
