@@ -236,7 +236,7 @@ int Server::getOutputcount() {
 /* ########################################### CRDT METHODS ########################################### */
 
 std::vector<int>
-Server::insertSymbolNewCRDT(int index, char character, const std::string &username, const std::string &filename) {
+Server::insertSymbolNewCRDT(int index, wchar_t character, const std::string &username, const std::string &filename) {
     std::vector<int> vector;
     if (this->symbolsPerFile.at(filename).empty()) {
         vector = {0};
