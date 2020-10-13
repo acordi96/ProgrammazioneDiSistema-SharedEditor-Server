@@ -169,9 +169,9 @@ void Server::modFile(const std::string &filename, bool force) {
     if (!force)
         this->modsPerFile.at(filename)++;
     if (this->modsPerFile.at(filename) >= nModsBeforeWrite || force) {
-        std::ofstream file;
+        std::wofstream file;
         file.open(filename);
-        char crdtToWrite[this->symbolsPerFile.at(filename).size()];
+        wchar_t crdtToWrite[this->symbolsPerFile.at(filename).size()];
         int i = 0;
         for (auto &symbol : this->symbolsPerFile.at(filename)) {
             crdtToWrite[i++] = symbol.getCharacter();

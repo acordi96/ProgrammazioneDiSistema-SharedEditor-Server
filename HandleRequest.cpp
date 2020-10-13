@@ -526,17 +526,17 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 sendAtClient(j.dump());
             } else { //prima volta che il file viene aperto (lettura da file)
                 Server::getInstance().openFile(filename, shared_from_this()->getUsername());
-                std::ifstream file;
+                std::wifstream file;
                 file.open(filename);
-                std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
+                std::wifstream in(filename, std::ifstream::ate | std::ifstream::binary);
                 int dim = in.tellg();
                 std::cout << SocketManager::output() << "CLIENT " << this->getId() << " ("
                           << this->getUsername() << ") OPEN (NEW) FILE (" << dim << " char): " << filename << std::endl;
-                char toWrite[maxBufferSymbol];
+                wchar_t toWrite[maxBufferSymbol];
                 int of = dim / maxBufferSymbol;
                 int i = 0;
                 std::vector<std::string> usernameToInsert;
-                std::vector<char > charToInsert;
+                std::vector<wchar_t > charToInsert;
                 std::vector<std::vector<int>> crdtToInsert;
                 while ((i + 1) * maxBufferSymbol <= dim) {
                     usernameToInsert.clear();
@@ -564,7 +564,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 usernameToInsert.clear();
                 charToInsert.clear();
                 crdtToInsert.clear();
-                char toWrite2[(dim % maxBufferSymbol) + 1];
+                wchar_t toWrite2[(dim % maxBufferSymbol) + 1];
                 file.read(toWrite2, dim % maxBufferSymbol);
                 // scrive Symbol nel file nella mappa della room
                 for (int k = 0; k < (dim % maxBufferSymbol); k++) {
