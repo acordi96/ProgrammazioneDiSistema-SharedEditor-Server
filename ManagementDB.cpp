@@ -32,7 +32,8 @@ QString ManagementDB::generateRandomColor() {
     return (QString::fromUtf8(color.data(), color.size()));
 }
 
-std::string ManagementDB::handleLogin(const std::string &user, const std::string &password, QString &color, QString &email) {
+std::string
+ManagementDB::handleLogin(const std::string &user, const std::string &password, QString &color, QString &email) {
     QSqlDatabase db = connect();
     if (db.open()) {
         QSqlQuery query;
@@ -189,7 +190,8 @@ std::multimap<std::pair<std::string, std::string>, std::string> ManagementDB::ta
                 QString owner = query.value(0).toString();
                 QString filename = query.value(1).toString();
                 QString invitation = query.value(2).toString();
-                files.insert({std::pair<std::string, std::string>(owner.toStdString(), filename.toStdString()), invitation.toStdString()});
+                files.insert({std::pair<std::string, std::string>(owner.toStdString(), filename.toStdString()),
+                              invitation.toStdString()});
             }
             db.close();
             return files;
@@ -199,7 +201,8 @@ std::multimap<std::pair<std::string, std::string>, std::string> ManagementDB::ta
 }
 
 std::string
-ManagementDB::handleRenameFile(const std::string &user, const std::string &oldName, const std::string &newName, std::vector<std::string> &invited) {
+ManagementDB::handleRenameFile(const std::string &user, const std::string &oldName, const std::string &newName,
+                               std::vector<std::string> &invited) {
     QSqlDatabase db = connect();
 
     if (db.open()) {
@@ -209,7 +212,7 @@ ManagementDB::handleRenameFile(const std::string &user, const std::string &oldNa
         QString nuovo = QString::fromUtf8(newName.data(), newName.size());
         QSqlQuery query2;
         query2.prepare("SELECT username FROM files WHERE owner ='" + id + "' and titolo = '" + vecchio + "'");
-        if(query2.exec()) {
+        if (query2.exec()) {
             while (query2.next()) {
                 invited.push_back(query2.value(0).toString().toStdString());
             }
@@ -285,7 +288,8 @@ ManagementDB::validateInvitation(const std::string &user, const std::string &cod
         return std::pair<std::string, std::string>("REFUSED", "CONNESSION_ERROR");
 }
 
-std::string ManagementDB::handleDeleteFile(const std::string &user, const std::string &name, const std::string &owner, std::vector<std::string> &invited) {
+std::string ManagementDB::handleDeleteFile(const std::string &user, const std::string &name, const std::string &owner,
+                                           std::vector<std::string> &invited) {
     QSqlDatabase db = connect();
 
     if (db.open()) {
@@ -293,10 +297,10 @@ std::string ManagementDB::handleDeleteFile(const std::string &user, const std::s
         QString qowner = QString::fromUtf8(owner.data(), owner.size());
         QString qfilename = QString::fromUtf8(name.data(), name.size());
         QString quser = QString::fromUtf8(user.data(), user.size());
-        if(owner == user) { //cancella per il creatore cancella per tutti
+        if (owner == user) { //cancella per il creatore cancella per tutti
             QSqlQuery query2;
             query2.prepare("SELECT username FROM files WHERE owner ='" + qowner + "' and titolo = '" + qfilename + "'");
-            if(query2.exec()) {
+            if (query2.exec()) {
                 while (query2.next()) {
                     invited.push_back(query2.value(0).toString().toStdString());
                 }

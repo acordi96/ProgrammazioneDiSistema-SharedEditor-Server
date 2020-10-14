@@ -29,7 +29,7 @@ void Server::join(const participant_ptr &participant) {
               << "): ";
     for (auto &p : participants_) {
         std::cout << "[ID: " << std::to_string(p->getId()) << ", USERNAME: ";
-        if(p->getUsername().empty())
+        if (p->getUsername().empty())
             std::cout << "''";
         else
             std::cout << p->getUsername();
@@ -51,7 +51,7 @@ void Server::leave(const participant_ptr &participant) {
                       << "): ";
             for (auto &p : participants_) {
                 std::cout << "[ID: " << std::to_string(p->getId()) << ", USERNAME: ";
-                if(p->getUsername().empty())
+                if (p->getUsername().empty())
                     std::cout << "''";
                 else
                     std::cout << p->getUsername();
@@ -255,7 +255,7 @@ Server::insertSymbolNewCRDT(int index, char character, const std::string &userna
     return vector;
 }
 
-//inserisci symbol gia' generato in un vettore di symbol nel posto giusto
+//generate for a new symbol the index position in a symbols vector
 int Server::generateIndexCRDT(Symbol symbol, const std::string &filename, int iter, int start, int end) {
     if (start == -1 && end == -1) {
         if (this->symbolsPerFile.at(filename).empty())

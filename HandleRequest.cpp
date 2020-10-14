@@ -365,7 +365,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false);
         }
 
-        json j = json{{"response",        "insert_res"},
+        json j = json{{"response",         "insert_res"},
                       {"usernameToInsert", usernameToInsert},
                       {"charToInsert",     charToInsert},
                       {"crdtToInsert",     crdtToInsert}};
@@ -409,7 +409,6 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         if (!boost::filesystem::exists(personalDir)) { //anche se gia' fatto in signup
             //creazione cartella personale
             boost::filesystem::create_directory(personalDir);
-            std::cout << "Cartella personale " << js.at("username") << " creata" << std::endl;
         }
 #ifdef Q_OS_LINUX //linux
         std::string filename =
