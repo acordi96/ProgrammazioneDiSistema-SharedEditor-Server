@@ -76,6 +76,8 @@ public:
 
     int getOutputcount();
 
+    void printCRDT(const std::string &filename);
+
 private:
     Server() = default;
 

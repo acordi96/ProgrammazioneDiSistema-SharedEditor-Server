@@ -7,7 +7,7 @@
 #include "Headers/Server.h"
 #include "Headers/SocketManager.h"
 
-#define nModsBeforeWrite 150 //numero di modifiche prima di modificare il file (>0)
+#define nModsBeforeWrite 500 //numero di modifiche prima di modificare il file (>0)
 
 Server::~Server() {
     std::vector<std::string> openFiles;
@@ -164,20 +164,45 @@ bool Server::removeUsernameFromFile(const std::string &filename, const std::stri
 }
 
 void Server::modFile(const std::string &filename, bool force) {
-    if (force && (this->modsPerFile.at(filename) == 0)) //scrittura forzata ma file gia' sincronizzato
-        return;
     if (!force)
         this->modsPerFile.at(filename)++;
     if (this->modsPerFile.at(filename) >= nModsBeforeWrite || force) {
+        char toWriteReadable[this->symbolsPerFile.at(filename).size()];
         std::ofstream file;
+        std::ofstream fileReadable;
         file.open(filename);
-        char crdtToWrite[this->symbolsPerFile.at(filename).size()];
-        int i = 0;
-        for (auto &symbol : this->symbolsPerFile.at(filename)) {
-            crdtToWrite[i++] = symbol.getCharacter();
+        std::vector<int> forcedCRDT;
+        json j;
+        for (int iter = 0; iter != this->symbolsPerFile.at(filename).size(); iter++) {
+            if(force) {
+                forcedCRDT.clear();
+                forcedCRDT.push_back(iter);
+                j = {
+                        {"character", this->symbolsPerFile.at(filename)[iter].getCharacter()},
+                        {"username",  this->symbolsPerFile.at(filename)[iter].getUsername()},
+                        {"posizione", forcedCRDT}
+                };
+            } else {
+                j = {
+                        {"character", this->symbolsPerFile.at(filename)[iter].getCharacter()},
+                        {"username",  this->symbolsPerFile.at(filename)[iter].getUsername()},
+                        {"posizione", this->symbolsPerFile.at(filename)[iter].getPosizione()}
+                };
+            }
+            std::string linej = j.dump();
+            if(iter != this->symbolsPerFile.at(filename).size() - 1)
+                linej += "\n";
+            const char *line = linej.c_str();
+            file.write(line, linej.size());
+            toWriteReadable[iter] = this->symbolsPerFile.at(filename)[iter].getCharacter();
         }
-        file.write(crdtToWrite, this->symbolsPerFile.at(filename).size());
         file.close();
+        std::string filenameReadable = filename;
+        filenameReadable.erase(filename.size() - 4);
+        filenameReadable += "_readable.txt";
+        fileReadable.open(filenameReadable);
+        fileReadable.write(toWriteReadable, this->symbolsPerFile.at(filename).size());
+        fileReadable.close();
         std::cout << SocketManager::output() << "UPDATED" << " (" << this->modsPerFile.at(filename) << " MODS)"
                   << " LOCAL FILE: " << filename << std::endl;
         this->modsPerFile.at(filename) = 0;
@@ -369,4 +394,20 @@ std::vector<int> Server::generatePosBetween(std::vector<int> pos1, std::vector<i
         }
     }
     return std::vector<int>();
+}
+
+void Server::printCRDT(const std::string &filename) {
+    std::cout << SocketManager::output() << "FILE CRDT: " << std::flush; //print crdt
+        for (auto iterPositions = this->symbolsPerFile.at(filename).begin(); iterPositions != this->symbolsPerFile.at(filename).end(); ++iterPositions) {
+            if (iterPositions->getCharacter() != 10 && iterPositions->getCharacter() != 13)
+                std::cout << "[" << (int) iterPositions->getCharacter() << "(" << iterPositions->getCharacter()
+                          << ") - " << std::flush;
+            else
+                std::cout << "[" << (int) iterPositions->getCharacter() << "(\\n) - " << std::flush;
+            for (int i = 0; i < iterPositions->getPosizione().size(); i++)
+                std::cout << std::to_string(iterPositions->getPosizione()[i]) << std::flush;
+            std::cout << "]" << std::flush;
+        }
+        std::cout << std::endl;
+
 }
