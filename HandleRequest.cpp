@@ -490,7 +490,6 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 std::vector<int> usernameToInsert;
                 std::vector<char> charToInsert;
                 std::vector<std::vector<int>> crdtToInsert;
-                std::vector<std::string> idToUsername;
                 std::map<std::string, int> usernameToId;
                 int countId = 0;
                 while ((i + 1) * maxBufferSymbol <= dim) {
@@ -508,14 +507,17 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                         charToInsert.push_back(symbols[(i * maxBufferSymbol) + k].getCharacter());
                         crdtToInsert.push_back(symbols[(i * maxBufferSymbol) + k].getPosizione());
                     }
-                    idToUsername.clear();
-                    for (std::map<std::string, int>::iterator i = usernameToId.begin(); i != usernameToId.end(); ++i)
-                        idToUsername.push_back(i->first);
+                    std::vector<std::string> idToUsername;
+                    while(idToUsername.size() != usernameToId.size())
+                        for(auto &pair : usernameToId)
+                            if(pair.second == idToUsername.size())
+                                idToUsername.push_back(pair.first);
+
                     json j = json{{"response",         "open_file"},
                                   {"usernameToInsert", usernameToInsert},
                                   {"charToInsert",     charToInsert},
                                   {"crdtToInsert",     crdtToInsert},
-                                  {"idToUsername",     idToUsername}};
+                                  {"usernameToId",     idToUsername}};
                     sendAtClient(j.dump());
                     i++;
                 }
@@ -531,19 +533,22 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                     charToInsert.push_back(symbols[(of * maxBufferSymbol) + k].getCharacter());
                     crdtToInsert.push_back(symbols[(of * maxBufferSymbol) + k].getPosizione());
                 }
-                idToUsername.clear();
-                for (std::map<std::string, int>::iterator i = usernameToId.begin(); i != usernameToId.end(); ++i)
-                    idToUsername.push_back(i->first);
+                std::vector<std::string> idToUsername;
+                while(idToUsername.size() != usernameToId.size())
+                    for(auto &pair : usernameToId)
+                        if(pair.second == idToUsername.size())
+                            idToUsername.push_back(pair.first);
                 json j = json{{"response",         "open_file"},
                               {"usernameToInsert", usernameToInsert},
                               {"charToInsert",     charToInsert},
                               {"crdtToInsert",     crdtToInsert},
-                              {"idToUsername",     idToUsername},
+                              {"usernameToId",     idToUsername},
                               {"endOpenFile",      "finished"}};
                 sendAtClient(j.dump());
 
                 std::cout << SocketManager::output() << "CLIENT " << this->getId() << " ("
-                          << this->getUsername() << ") OPEN (NOT NEW) FILE (" << dim << " char): " << filename << std::endl;
+                          << this->getUsername() << ") OPEN (NOT NEW) FILE (" << dim << " char): " << filename
+                          << std::endl;
 
             } else { //prima volta che il file viene aperto (lettura da file)
                 Server::getInstance().openFile(filename, shared_from_this()->getUsername());
@@ -553,34 +558,33 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 std::vector<char> charToInsert;
                 std::vector<std::vector<int>> crdtToInsert;
                 json jline;
-                std::vector<std::string> idToUsername;
                 std::string line;
                 int dim = 0;
                 int symbolCount = 0;
                 std::map<std::string, int> usernameToId;
+                int countId = 0;
                 while (std::getline(file, line)) {
                     jline = json::parse(line);
-                    if (usernameToId.find(jline.at("username").get<std::string>()) == usernameToId.end()) {
-                        usernameToInsert.push_back(usernameToId.size());
-                        usernameToId.insert({jline.at("username").get<std::string>(), usernameToId.size()});
-                    } else {
-                        usernameToInsert.push_back(usernameToId.at(jline.at("username").get<std::string>()));
-                    }
+                    if (usernameToId.find(jline.at("username").get<std::string>()) == usernameToId.end())
+                        usernameToId.insert({jline.at("username").get<std::string>(), countId++});
+                    usernameToInsert.push_back(usernameToId.at(jline.at("username").get<std::string>()));
+
                     charToInsert.push_back(jline.at("character").get<char>());
                     crdtToInsert.push_back(jline.at("posizione").get<std::vector<int>>());
                     Server::getInstance().insertSymbolIndex(
                             Symbol(jline.at("character").get<char>(), jline.at("username").get<std::string>(),
                                    jline.at("posizione").get<std::vector<int>>()), dim++, filename);
                     if (symbolCount++ == maxBufferSymbol) {
-                        idToUsername.clear();
-                        for (std::map<std::string, int>::iterator i = usernameToId.begin();
-                             i != usernameToId.end(); ++i)
-                            idToUsername.push_back(i->first);
+                        std::vector<std::string> idToUsername;
+                        while(idToUsername.size() != usernameToId.size())
+                            for(auto &pair : usernameToId)
+                                if(pair.second == idToUsername.size())
+                                    idToUsername.push_back(pair.first);
                         json j = json{{"response",         "open_file"},
                                       {"usernameToInsert", usernameToInsert},
                                       {"charToInsert",     charToInsert},
                                       {"crdtToInsert",     crdtToInsert},
-                                      {"idToUsername",     idToUsername}};
+                                      {"usernameToId",     idToUsername}};
                         sendAtClient(j.dump());
                         symbolCount = 0;
                         usernameToInsert.clear();
@@ -588,14 +592,16 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                         crdtToInsert.clear();
                     }
                 }
-                idToUsername.clear();
-                for (std::map<std::string, int>::iterator i = usernameToId.begin(); i != usernameToId.end(); ++i)
-                    idToUsername.push_back(i->first);
+                std::vector<std::string> idToUsername;
+                while(idToUsername.size() != usernameToId.size())
+                    for(auto &pair : usernameToId)
+                        if(pair.second == idToUsername.size())
+                            idToUsername.push_back(pair.first);
                 json j = json{{"response",         "open_file"},
                               {"usernameToInsert", usernameToInsert},
                               {"charToInsert",     charToInsert},
                               {"crdtToInsert",     crdtToInsert},
-                              {"idToUsername",     idToUsername},
+                              {"usernameToId",     idToUsername},
                               {"endOpenFile",      "finished"}};
                 sendAtClient(j.dump());
 
