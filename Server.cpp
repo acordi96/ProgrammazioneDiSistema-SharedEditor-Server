@@ -164,6 +164,7 @@ bool Server::removeUsernameFromFile(const std::string &filename, const std::stri
 }
 
 void Server::modFile(const std::string &filename, bool force) {
+    //std::locale::global(std::locale(""));
     if (!force)
         this->modsPerFile.at(filename)++;
     if (this->modsPerFile.at(filename) >= nModsBeforeWrite || force) {
@@ -202,6 +203,7 @@ void Server::modFile(const std::string &filename, bool force) {
         filenameReadable += "_readable.txt";
         fileReadable.open(filenameReadable);
         fileReadable.write(toWriteReadable, this->symbolsPerFile.at(filename).size());
+        //fileReadable<<toWriteReadable;
         fileReadable.close();
         std::cout << SocketManager::output() << "UPDATED" << " (" << this->modsPerFile.at(filename) << " MODS)"
                   << " LOCAL FILE: " << filename << std::endl;
@@ -261,7 +263,7 @@ int Server::getOutputcount() {
 /* ########################################### CRDT METHODS ########################################### */
 
 std::vector<int>
-Server::insertSymbolNewCRDT(int index, char character, const std::string &username, const std::string &filename) {
+Server::insertSymbolNewCRDT(int index, wchar_t character, const std::string &username, const std::string &filename) {
     std::vector<int> vector;
     if (this->symbolsPerFile.at(filename).empty()) {
         vector = {0};

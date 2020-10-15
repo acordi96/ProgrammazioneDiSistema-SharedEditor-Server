@@ -353,7 +353,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
     } else if (type_request == "insert") {
         //prendo il vettore di symbol
         std::vector<std::string> usernameToInsert = js.at("usernameToInsert").get<std::vector<std::string>>();
-        std::vector<char> charToInsert = js.at("charToInsert").get<std::vector<char>>();
+        std::vector<wchar_t> charToInsert = js.at("charToInsert").get<std::vector<wchar_t>>();
         std::vector<std::vector<int>> crdtToInsert = js.at("crdtToInsert").get<std::vector<std::vector<int>>>();
         for (int i = 0; i < usernameToInsert.size(); i++) {
             //ricreo il simbolo
@@ -375,7 +375,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         //prendo il vettore di symbol
         std::vector<Symbol> symbolsToErase;
         std::vector<std::string> usernameToErase = js.at("usernameToErase").get<std::vector<std::string>>();
-        std::vector<char> charToErase = js.at("charToErase").get<std::vector<char>>();
+        std::vector<wchar_t> charToErase = js.at("charToErase").get<std::vector<wchar_t>>();
         std::vector<std::vector<int>> crdtToErase = js.at("crdtToErase").get<std::vector<std::vector<int>>>();
         for (int i = 0; i < usernameToErase.size(); i++)
             symbolsToErase.emplace_back(charToErase[i], usernameToErase[i], crdtToErase[i]);
@@ -488,7 +488,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 int of = dim / maxBufferSymbol;
                 int i = 0;
                 std::vector<int> usernameToInsert;
-                std::vector<char> charToInsert;
+                std::vector<wchar_t> charToInsert;
                 std::vector<std::vector<int>> crdtToInsert;
                 std::map<std::string, int> usernameToId;
                 int countId = 0;
@@ -555,7 +555,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 std::ifstream file;
                 file.open(filename);
                 std::vector<int> usernameToInsert;
-                std::vector<char> charToInsert;
+                std::vector<wchar_t> charToInsert;
                 std::vector<std::vector<int>> crdtToInsert;
                 json jline;
                 std::string line;
@@ -569,10 +569,10 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                         usernameToId.insert({jline.at("username").get<std::string>(), countId++});
                     usernameToInsert.push_back(usernameToId.at(jline.at("username").get<std::string>()));
 
-                    charToInsert.push_back(jline.at("character").get<char>());
+                    charToInsert.push_back(jline.at("character").get<wchar_t>());
                     crdtToInsert.push_back(jline.at("posizione").get<std::vector<int>>());
                     Server::getInstance().insertSymbolIndex(
-                            Symbol(jline.at("character").get<char>(), jline.at("username").get<std::string>(),
+                            Symbol(jline.at("character").get<wchar_t>(), jline.at("username").get<std::string>(),
                                    jline.at("posizione").get<std::vector<int>>()), dim++, filename);
                     if (symbolCount++ == maxBufferSymbol) {
                         std::vector<std::string> idToUsername;
