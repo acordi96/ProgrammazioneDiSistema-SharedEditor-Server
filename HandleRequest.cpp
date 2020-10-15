@@ -12,7 +12,7 @@
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "InfiniteRecursion"
 
-#define maxBufferSymbol 4 //numero massimo di symbols mandati contemporaneamente
+#define maxBufferSymbol 150 //numero massimo di symbols mandati contemporaneamente
 
 HandleRequest::HandleRequest(tcp::socket socket) : socket(std::move(socket)) {}
 
@@ -64,12 +64,12 @@ void HandleRequest::do_read_body() {
                                     }
                                     std::string requestType = messageFromClient.at("operation").get<std::string>();
                                     std::string response;
-                                    //try {
-                                    response = handleRequestType(messageFromClient, requestType);
-                                    /*} catch (...) {
+                                    try {
+                                        response = handleRequestType(messageFromClient, requestType);
+                                    } catch (...) {
                                         std::cout << "handleRequest ERROR: " << errno << std::endl;
                                         sendAtClient(json{{"response", "handleRequest ERROR"}}.dump());
-                                    }*/
+                                    }
 
                                     do_read_header();
                                 } else {
@@ -508,9 +508,9 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                         crdtToInsert.push_back(symbols[(i * maxBufferSymbol) + k].getPosizione());
                     }
                     std::vector<std::string> idToUsername;
-                    while(idToUsername.size() != usernameToId.size())
-                        for(auto &pair : usernameToId)
-                            if(pair.second == idToUsername.size())
+                    while (idToUsername.size() != usernameToId.size())
+                        for (auto &pair : usernameToId)
+                            if (pair.second == idToUsername.size())
                                 idToUsername.push_back(pair.first);
 
                     json j = json{{"response",         "open_file"},
@@ -534,9 +534,9 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                     crdtToInsert.push_back(symbols[(of * maxBufferSymbol) + k].getPosizione());
                 }
                 std::vector<std::string> idToUsername;
-                while(idToUsername.size() != usernameToId.size())
-                    for(auto &pair : usernameToId)
-                        if(pair.second == idToUsername.size())
+                while (idToUsername.size() != usernameToId.size())
+                    for (auto &pair : usernameToId)
+                        if (pair.second == idToUsername.size())
                             idToUsername.push_back(pair.first);
                 json j = json{{"response",         "open_file"},
                               {"usernameToInsert", usernameToInsert},
@@ -576,9 +576,9 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                                    jline.at("posizione").get<std::vector<int>>()), dim++, filename);
                     if (symbolCount++ == maxBufferSymbol) {
                         std::vector<std::string> idToUsername;
-                        while(idToUsername.size() != usernameToId.size())
-                            for(auto &pair : usernameToId)
-                                if(pair.second == idToUsername.size())
+                        while (idToUsername.size() != usernameToId.size())
+                            for (auto &pair : usernameToId)
+                                if (pair.second == idToUsername.size())
                                     idToUsername.push_back(pair.first);
                         json j = json{{"response",         "open_file"},
                                       {"usernameToInsert", usernameToInsert},
@@ -593,9 +593,9 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                     }
                 }
                 std::vector<std::string> idToUsername;
-                while(idToUsername.size() != usernameToId.size())
-                    for(auto &pair : usernameToId)
-                        if(pair.second == idToUsername.size())
+                while (idToUsername.size() != usernameToId.size())
+                    for (auto &pair : usernameToId)
+                        if (pair.second == idToUsername.size())
                             idToUsername.push_back(pair.first);
                 json j = json{{"response",         "open_file"},
                               {"usernameToInsert", usernameToInsert},
@@ -609,7 +609,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                           << this->getUsername() << ") OPEN (NEW) FILE (" << dim << " char): " << filename << std::endl;
 
             }
-            Server::getInstance().printCRDT(filename);
+            //Server::getInstance().printCRDT(filename); //debug
 
             //aggiorna su ogni client lista di participant su questo file
             std::vector<std::string> usernamesInFile = Server::getInstance().getUsernamesInFile(filename);

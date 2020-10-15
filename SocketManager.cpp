@@ -30,15 +30,15 @@ std::string SocketManager::output() {
     auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     std::string time = std::ctime(&now);
     std::string out = "[" + time.erase(time.length() - 1) + "] {";
-    int number = Server::getInstance().getOutputcount();
-    int outnumber = number;
-    int count = 0;
+    unsigned int number = Server::getInstance().getOutputcount();
+    unsigned int outnumber = number;
+    unsigned int count = 0;
     while (number != 0) {
         number = number / 10;
         ++count;
     }
     count = 7 - count;
-    for(int i = 0; i < count; i++)
+    for (int i = 0; i < count; i++)
         out += "0";
     out += std::to_string(outnumber) + "} - ";
     return out;

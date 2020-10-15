@@ -7,7 +7,7 @@
 #include "Headers/Server.h"
 #include "Headers/SocketManager.h"
 
-#define nModsBeforeWrite 500 //numero di modifiche prima di modificare il file (>0)
+#define nModsBeforeWrite 150 //numero di modifiche prima di modificare il file (>0)
 
 Server::~Server() {
     std::vector<std::string> openFiles;
@@ -21,6 +21,8 @@ Server &Server::getInstance() {
     static Server instance;
     return instance;
 }
+
+/* ########################################### PARTICIPANT MANAGEMENT ########################################## */
 
 void Server::join(const participant_ptr &participant) {
     participants_.insert(participant);
@@ -49,14 +51,14 @@ void Server::leave(const participant_ptr &participant) {
             std::cout << SocketManager::output() << "PARTICIPANTS LIST UPDATED ("
                       << std::to_string(participants_.size())
                       << "): ";
-            for (auto &p : participants_) {
+            for (auto &pa : participants_) {
                 std::cout << "[ID: " << std::to_string(p->getId()) << ", USERNAME: ";
-                if (p->getUsername().empty())
+                if (pa->getUsername().empty())
                     std::cout << "''";
                 else
-                    std::cout << p->getUsername();
+                    std::cout << pa->getUsername();
                 std::cout << ", FILE: ";
-                if (p->getCurrentFile().empty())
+                if (pa->getCurrentFile().empty())
                     std::cout << "(NO)], ";
                 else
                     std::cout << "(YES)], ";
@@ -66,6 +68,63 @@ void Server::leave(const participant_ptr &participant) {
         }
     }
 }
+
+std::vector<std::string> Server::getColors(const std::vector<std::string> &usernames) {
+    std::vector<std::string> colors;
+    for (auto &user : usernames) {
+        for (auto &participant : participants_) {
+            if (participant->getUsername() == user) {
+                colors.emplace_back(participant->getColor());
+            }
+        }
+    }
+    return colors;
+}
+
+bool Server::isParticipantIn(int id) {
+    for (auto &participant : participants_)
+        if (participant->getId() == id)
+            return true;
+    return false;
+}
+
+bool Server::isParticipantIn(const std::string &username) {
+    for (auto &participant : participants_)
+        if (participant->getUsername() == username)
+            return true;
+    return false;
+}
+
+participant_ptr Server::getParticipant(const std::string &username) {
+    for (auto &participant : participants_) {
+        if (participant->getUsername() == username)
+            return participant;
+    }
+    return nullptr;
+}
+
+unsigned int Server::getOutputcount() {
+    return this->countOutput++;
+}
+
+void Server::printCRDT(const std::string &filename) {
+    std::cout << SocketManager::output() << "FILE CRDT: " << std::flush; //print crdt
+    for (auto iterPositions = this->symbolsPerFile.at(filename).begin();
+         iterPositions != this->symbolsPerFile.at(filename).end(); ++iterPositions) {
+        if (iterPositions->getCharacter() != 10 && iterPositions->getCharacter() != 13)
+            std::cout << "[" << (int) iterPositions->getCharacter() << "(" << iterPositions->getCharacter()
+                      << ") - " << std::flush;
+        else
+            std::cout << "[" << (int) iterPositions->getCharacter() << "(\\n) - " << std::flush;
+        for (int i = 0; i < iterPositions->getPosizione().size(); i++)
+            std::cout << std::to_string(iterPositions->getPosizione()[i]) << std::flush;
+        std::cout << "]" << std::flush;
+    }
+    std::cout << std::endl;
+
+}
+
+/* ########################################### COMMUNICATION ########################################## */
 
 void Server::deliver(const Message &msg) {
     recent_msgs_.push_back(msg);
@@ -105,6 +164,8 @@ void Server::deliverToAllOnFile(const Message &msg, const participant_ptr &parti
 void Server::send(const MessageSymbol &m) {
     infoMsgs_.push(m);
 }
+
+/* ########################################### FILE MANAGEMENT ######################################## */
 
 void Server::openFile(const std::string &filename, const std::string &username) {
     //inserisco entry in mappa dei simboli
@@ -175,7 +236,7 @@ void Server::modFile(const std::string &filename, bool force) {
         std::vector<int> forcedCRDT;
         json j;
         for (int iter = 0; iter != this->symbolsPerFile.at(filename).size(); iter++) {
-            if(force) {
+            if (force) {
                 forcedCRDT.clear();
                 forcedCRDT.push_back(iter);
                 j = {
@@ -191,7 +252,7 @@ void Server::modFile(const std::string &filename, bool force) {
                 };
             }
             std::string linej = j.dump();
-            if(iter != this->symbolsPerFile.at(filename).size() - 1)
+            if (iter != this->symbolsPerFile.at(filename).size() - 1)
                 linej += "\n";
             const char *line = linej.c_str();
             file.write(line, linej.size());
@@ -222,67 +283,9 @@ std::vector<std::string> Server::closeFile(const std::string &filename, const st
     }
 }
 
-std::vector<std::string> Server::getColors(const std::vector<std::string> &usernames) {
-    std::vector<std::string> colors;
-    for (auto &user : usernames) {
-        for (auto &participant : participants_) {
-            if (participant->getUsername() == user) {
-                colors.emplace_back(participant->getColor());
-            }
-        }
-    }
-    return colors;
-}
-
-bool Server::isParticipantIn(int id) {
-    for (auto &participant : participants_)
-        if (participant->getId() == id)
-            return true;
-    return false;
-}
-
-bool Server::isParticipantIn(const std::string &username) {
-    for (auto &participant : participants_)
-        if (participant->getUsername() == username)
-            return true;
-    return false;
-}
-
-participant_ptr Server::getParticipant(const std::string &username) {
-    for (auto &participant : participants_) {
-        if (participant->getUsername() == username)
-            return participant;
-    }
-    return nullptr;
-}
-
-int Server::getOutputcount() {
-    return this->countOutput++;
-}
-
 /* ########################################### CRDT METHODS ########################################### */
 
-std::vector<int>
-Server::insertSymbolNewCRDT(int index, wchar_t character, const std::string &username, const std::string &filename) {
-    std::vector<int> vector;
-    if (this->symbolsPerFile.at(filename).empty()) {
-        vector = {0};
-        index = 0;
-    } else if (index > this->symbolsPerFile.at(filename).size() - 1) {
-        vector = {this->symbolsPerFile.at(filename).back().getPosizione().at(0) + 1};
-        index = this->symbolsPerFile.at(filename).size();
-    } else if (index == 0) {
-        vector = {this->symbolsPerFile.at(filename).front().getPosizione().at(0) - 1};
-    } else
-        vector = generatePos(index, filename);
-    Symbol s(character, username, vector);
-
-    this->symbolsPerFile.at(filename).insert(this->symbolsPerFile.at(filename).begin() + index, s);
-
-    return vector;
-}
-
-//generate for a new symbol the index position in a symbols vector
+//genera per un simbolo (con crdt) la posizione all'interno di un vettore di simboli
 int Server::generateIndexCRDT(Symbol symbol, const std::string &filename, int iter, int start, int end) {
     if (start == -1 && end == -1) {
         if (this->symbolsPerFile.at(filename).empty())
@@ -314,6 +317,7 @@ int Server::generateIndexCRDT(Symbol symbol, const std::string &filename, int it
     return newEnd;
 }
 
+//inserisce in un vettore di simoli un simbolo ad una certa posizione posizione
 void Server::insertSymbolIndex(const Symbol &symbol, int index, const std::string &filename) {
     int i = 0;
     for (auto iterPositions = this->symbolsPerFile.at(filename).begin();
@@ -327,6 +331,7 @@ void Server::insertSymbolIndex(const Symbol &symbol, int index, const std::strin
     this->symbolsPerFile.at(filename).insert(this->symbolsPerFile.at(filename).end(), symbol);
 }
 
+//cerca e cancella un simobolo da vettore di simboli
 void Server::eraseSymbolCRDT(std::vector<Symbol> symbolsToErase, const std::string &filename) {
     int lastFound = 0;
     int missed = 0;
@@ -361,13 +366,15 @@ void Server::eraseSymbolCRDT(std::vector<Symbol> symbolsToErase, const std::stri
     }
 }
 
-std::vector<int> Server::generatePos(int index, std::string filename) {
+//genera un vettore crdt ad una data posizione in un vettore di simboli
+std::vector<int> Server::generatePos(int index, const std::string &filename) {
     const std::vector<int> posBefore = symbolsPerFile.at(filename)[index - 1].getPosizione();
     const std::vector<int> posAfter = symbolsPerFile.at(filename)[index].getPosizione();
     std::vector<int> newPos;
     return generatePosBetween(posBefore, posAfter, newPos);
 }
 
+//richiamata da generatePos
 std::vector<int> Server::generatePosBetween(std::vector<int> pos1, std::vector<int> pos2, std::vector<int> newPos) {
     int id1 = pos1.at(0);
     int id2 = pos2.at(0);
@@ -396,20 +403,4 @@ std::vector<int> Server::generatePosBetween(std::vector<int> pos1, std::vector<i
         }
     }
     return std::vector<int>();
-}
-
-void Server::printCRDT(const std::string &filename) {
-    std::cout << SocketManager::output() << "FILE CRDT: " << std::flush; //print crdt
-        for (auto iterPositions = this->symbolsPerFile.at(filename).begin(); iterPositions != this->symbolsPerFile.at(filename).end(); ++iterPositions) {
-            if (iterPositions->getCharacter() != 10 && iterPositions->getCharacter() != 13)
-                std::cout << "[" << (int) iterPositions->getCharacter() << "(" << iterPositions->getCharacter()
-                          << ") - " << std::flush;
-            else
-                std::cout << "[" << (int) iterPositions->getCharacter() << "(\\n) - " << std::flush;
-            for (int i = 0; i < iterPositions->getPosizione().size(); i++)
-                std::cout << std::to_string(iterPositions->getPosizione()[i]) << std::flush;
-            std::cout << "]" << std::flush;
-        }
-        std::cout << std::endl;
-
 }
