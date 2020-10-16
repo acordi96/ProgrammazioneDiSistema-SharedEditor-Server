@@ -768,20 +768,21 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         }
 
     } else if (type_request == "request_update_profile") {
-        std::string username, email, oldPassword, newPassword;
+        std::string username, email, oldPassword, newPassword, color;
 
         username = js.at("username").get<std::string>();
         email = js.at("email").get<std::string>();
         newPassword = js.at("newPassword").get<std::string>();
         oldPassword = js.at("oldPassword").get<std::string>();
+        color = js.at("color").get<std::string>();
 
         //devo creare in Managementdb una funzione handleEditProfile e fare le operazioni nel DB
         std::string resDB = ManagementDB::getInstance().handleEditProfile(username, email, newPassword,
-                                                                          oldPassword);
+                                                                          oldPassword, color);
         if (resDB == "EDIT_SUCCESS") {
             json j = json{{"response",    resDB},
-                          {"email",       email},
-                          {"newPassword", newPassword}};
+                          {"username", username},
+                          {"email",       email}};
             sendAtClient(j.dump());
             return j.dump();
         } else {

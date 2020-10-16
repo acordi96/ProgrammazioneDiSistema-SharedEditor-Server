@@ -221,9 +221,6 @@ ManagementDB::handleRenameFile(const std::string &user, const std::string &oldNa
             std::cout << "\n rinomina fallita\n";
             return "FILE_DELETE_FAILED";
         }
-        /*query.prepare(
-                "UPDATE files SET titolo = '" + nuovo + "' WHERE username ='" + id + "' and titolo = '" + vecchio +
-                "'");*/
         query.prepare(
                 "UPDATE files SET titolo = '" + nuovo + "' WHERE owner ='" + id + "' and titolo = '" + vecchio +
                 "'");
@@ -360,7 +357,7 @@ std::string ManagementDB::getInvitation(const std::string &owner, const std::str
         return "CONNESSION_ERROR_";
 }
 
-std::string ManagementDB::handleEditProfile(const std::string &user,const std::string &email,const std::string &newPassword,const std::string &oldPassword) {
+std::string ManagementDB::handleEditProfile(const std::string &user,const std::string &email,const std::string &newPassword,const std::string &oldPassword, const std::string & color) {
     QSqlDatabase db = connect();
 
     if (db.open()) {
@@ -368,33 +365,24 @@ std::string ManagementDB::handleEditProfile(const std::string &user,const std::s
 
         QString qUser = QString::fromUtf8(user.data(), user.size());
         QString qEmail = QString::fromUtf8(email.data(), email.size());
+        QString qColor = QString::fromUtf8(color.data(), color.size());
         QString qSaltedOldPassword, qSaltedNewPassword;
         std::string sale;
 
-        //prendo sale e salo le password
-        query.prepare("SELECT sale FROM user_login WHERE username = '" + qUser + "'");
+        //controllo corrispondenza vecchia password
+        query.prepare("SELECT sale, password FROM user_login WHERE username = '" + qUser + "'");
         if (query.exec()) {
             if (query.next()) {
                 sale = query.value(0).toString().toStdString();
-                std::string saltedOldPassword = md5(oldPassword + sale);
-                qSaltedOldPassword = QString::fromUtf8(saltedOldPassword.data(), saltedOldPassword.size());
-            }
-        } else {
-            db.close();
-            return "QUERY_FAILED";
-        }
-        //controllo corrispondenza vecchia password
-        query.clear();
-        query.prepare("SELECT password FROM user_login WHERE username = '" + qUser + "'");
-        if (query.exec()) {
-            if (query.next()) {
-                if(query.value(0).toString() != qSaltedOldPassword) {
+                std::string saltedPassword = md5(oldPassword + sale);
+                qSaltedOldPassword = QString::fromUtf8(saltedPassword.data(), saltedPassword.size());
+                if(query.value(1).toString() != qSaltedOldPassword) {
                     return "WRONG_OLD_PASSWORD";
                 }
             }
         } else {
             db.close();
-            return "QUERY_FAILED";
+            return "EDIT_FAILED";
         }
         //update email
         if(!email.empty()) {
@@ -402,7 +390,7 @@ std::string ManagementDB::handleEditProfile(const std::string &user,const std::s
             query.prepare("UPDATE user_login SET email = '" + qEmail + "' WHERE username = '" + qUser + "'");
             if (!query.exec()) {
                 db.close();
-                return "QUERY_FAILED";
+                return "EDIT_FAILED";
             }
         }
         //update password
@@ -413,7 +401,16 @@ std::string ManagementDB::handleEditProfile(const std::string &user,const std::s
             query.prepare("UPDATE user_login SET password = '" + qSaltedNewPassword + "' WHERE username = '" + qUser + "'");
             if (!query.exec()) {
                 db.close();
-                return "QUERY_FAILED";
+                return "EDIT_FAILED";
+            }
+        }
+        //update color
+        if(!color.empty()) {
+            query.clear();
+            query.prepare("UPDATE user_login SET color = '" + qColor + "' WHERE username = '" + qUser + "'");
+            if (!query.exec()) {
+                db.close();
+                return "EDIT_FAILED";
             }
         }
 
