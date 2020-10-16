@@ -722,7 +722,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         }
 
 
-    } else if (type_request == "delete_file") {
+    } else if (type_request == "delete_file")
+    {
 #ifdef Q_OS_LINUX //linux
         std::string filename =
                 pathFilesystem + "/" + js.at("username").get<std::string>() + "/" +
@@ -766,6 +767,37 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             sendAtClient(j.dump());
             return j.dump();
         }
+
+    }else if (type_request == "request_update_profile"){
+        std::string username,oldUsername, email, oldPassword, newPassword;
+
+        username = js.at("username").get<std::string>();
+        oldUsername = js.at("oldUsername").get<std::string>();
+        email = js.at("email").get<std::string>();
+        newPassword = js.at("newPassword").get<std::string>();
+        oldPassword = js.at("oldPassword").get<std::string>();
+
+        //devo creare in Managementdb una funzione handleEditProfile e fare le operazioni nel DB
+        std::string resDB = ManagementDB::getInstance().handleEditProfile(username,oldUsername,email,newPassword,oldPassword);
+        if(resDB != "PROFILE_UPDATE_FAILED"){
+            if(resDB == "USER_UPDATE_SUCCESS" || resDB == "USER_EMAIL_SUCCESS" ||  resDB == "PASSWORD_USER_SUCCESS" ||resDB == "PROFILE_UPDATE_SUCCESS"){
+                //modifico nome cartella filesystem
+                boost::filesystem::rename(pathFilesystem + "\\" + oldUsername,pathFilesystem + "\\" + username);
+            }
+            shared_from_this()->setUsername(username);
+            json j = json{{"response",    resDB},
+                          {"username",    username},
+                          {"email",       email}};
+            sendAtClient(j.dump());
+            return j.dump();
+        }else {
+            json j = json{{"response", resDB},
+                          {"username", username}};
+            sendAtClient(j.dump());
+            return j.dump();
+        }
+
+
 
     } else {
         std::cout << "nessun match col tipo di richiesta" << std::endl;
