@@ -774,15 +774,16 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         email = js.at("email").get<std::string>();
         newPassword = js.at("newPassword").get<std::string>();
         oldPassword = js.at("oldPassword").get<std::string>();
-        color = js.at("color").get<std::string>();
+        color = js.at("newColor").get<std::string>();
 
         //devo creare in Managementdb una funzione handleEditProfile e fare le operazioni nel DB
         std::string resDB = ManagementDB::getInstance().handleEditProfile(username, email, newPassword,
                                                                           oldPassword, color);
         if (resDB == "EDIT_SUCCESS") {
-            json j = json{{"response",    resDB},
+            json j = json{{"response", resDB},
                           {"username", username},
-                          {"email",       email}};
+                          {"email",    email},
+                          {"color",    color}};
             sendAtClient(j.dump());
             return j.dump();
         } else {
@@ -792,15 +793,11 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             return j.dump();
         }
 
-
     } else {
         std::cout << "nessun match col tipo di richiesta" <<
                   std::endl;
         json j = json{{"response", "general_error"}};
-        return j.
-
-                dump();
-
+        return j.dump();
     }
     return "";
 }

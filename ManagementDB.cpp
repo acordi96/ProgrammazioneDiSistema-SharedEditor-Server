@@ -357,7 +357,9 @@ std::string ManagementDB::getInvitation(const std::string &owner, const std::str
         return "CONNESSION_ERROR_";
 }
 
-std::string ManagementDB::handleEditProfile(const std::string &user,const std::string &email,const std::string &newPassword,const std::string &oldPassword, const std::string & color) {
+std::string
+ManagementDB::handleEditProfile(const std::string &user, const std::string &email, const std::string &newPassword,
+                                const std::string &oldPassword, const std::string &color) {
     QSqlDatabase db = connect();
 
     if (db.open()) {
@@ -376,7 +378,7 @@ std::string ManagementDB::handleEditProfile(const std::string &user,const std::s
                 sale = query.value(0).toString().toStdString();
                 std::string saltedPassword = md5(oldPassword + sale);
                 qSaltedOldPassword = QString::fromUtf8(saltedPassword.data(), saltedPassword.size());
-                if(query.value(1).toString() != qSaltedOldPassword) {
+                if (query.value(1).toString() != qSaltedOldPassword) {
                     return "WRONG_OLD_PASSWORD";
                 }
             }
@@ -385,7 +387,7 @@ std::string ManagementDB::handleEditProfile(const std::string &user,const std::s
             return "EDIT_FAILED";
         }
         //update email
-        if(!email.empty()) {
+        if (!email.empty()) {
             query.clear();
             query.prepare("UPDATE user_login SET email = '" + qEmail + "' WHERE username = '" + qUser + "'");
             if (!query.exec()) {
@@ -394,18 +396,19 @@ std::string ManagementDB::handleEditProfile(const std::string &user,const std::s
             }
         }
         //update password
-        if(!newPassword.empty()) {
+        if (!newPassword.empty()) {
             std::string saltedNewPassword = md5(newPassword + sale);
             qSaltedNewPassword = QString::fromUtf8(saltedNewPassword.data(), saltedNewPassword.size());
             query.clear();
-            query.prepare("UPDATE user_login SET password = '" + qSaltedNewPassword + "' WHERE username = '" + qUser + "'");
+            query.prepare(
+                    "UPDATE user_login SET password = '" + qSaltedNewPassword + "' WHERE username = '" + qUser + "'");
             if (!query.exec()) {
                 db.close();
                 return "EDIT_FAILED";
             }
         }
         //update color
-        if(!color.empty()) {
+        if (!color.empty()) {
             query.clear();
             query.prepare("UPDATE user_login SET color = '" + qColor + "' WHERE username = '" + qUser + "'");
             if (!query.exec()) {
