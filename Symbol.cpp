@@ -11,6 +11,11 @@ Symbol::Symbol(char car, std::string usr, std::vector<int> pos) : character(car)
 
 }
 
+Symbol::Symbol(char car, std::string usr, std::vector<int> pos, Style style) : character(car), username(std::move(usr)),
+                                                                               posizione(std::move(pos)), symbolStyle(std::move(style)) {
+
+}
+
 Symbol::Symbol() {
     Symbol::character = '\0';
     Symbol::username = "";
@@ -54,4 +59,12 @@ std::vector<int> Symbol::getPosizione() {
 
 void Symbol::setPosizione(const std::vector<int> &pos) {
     this->posizione = pos;
+}
+
+const Style &Symbol::getSymbolStyle() const {
+    return symbolStyle;
+}
+
+void Symbol::setSymbolStyle(const Style &symbolStyle) {
+    Symbol::symbolStyle = symbolStyle;
 }

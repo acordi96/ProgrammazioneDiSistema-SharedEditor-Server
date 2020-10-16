@@ -9,15 +9,22 @@
 #include <iostream>
 #include <array>
 #include <vector>
+#include "Style.h"
 
 class Symbol {
 private:
     char character;
     std::string username;
     std::vector<int> posizione;
+    Style symbolStyle;
 public:
     Symbol(char car, std::string usr, std::vector<int> pos);
+    Symbol(char car, std::string usr, std::vector<int> pos, Style style);
     Symbol();
+
+    const Style &getSymbolStyle() const;
+
+    void setSymbolStyle(const Style &symbolStyle);
 
     bool operator==(const Symbol& s2);
 

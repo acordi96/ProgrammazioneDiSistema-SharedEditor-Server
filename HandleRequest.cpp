@@ -726,7 +726,118 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             return j.dump();
         }
 
-    } else {
+    } else if (type_request == "styleChanged") {
+        //prendo il vettore di symbol
+        std::vector<std::string> usernameToChange = js.at("usernameToChange").get<std::vector<std::string>>();
+        std::vector<char> charToChange = js.at("charToChange").get<std::vector<char>>();
+        std::vector<std::vector<int>> crdtToChange = js.at("crdtToChange").get<std::vector<std::vector<int>>>();
+
+        json j;
+        Style style;
+        if(js.contains("fontFamily")){
+            std::string fontFamily = js.at("fontFamily").get<std::string>();
+            style.setFontFamily(fontFamily);
+            j = json{
+                    {"response","styleChanged"},
+                    {"usernameToChange", usernameToChange},
+                    {"charToChange",     charToChange},
+                    {"crdtToChange",     crdtToChange},
+                    {"fontFamily",     fontFamily}
+            };
+        }
+        if(js.contains("fontSize")){
+            int fontSize = js.at("fontSize").get<int>();
+            style.setFontSize(fontSize);
+            j = json{
+                    {"response","styleChanged"},
+                    {"usernameToChange", usernameToChange},
+                    {"charToChange",     charToChange},
+                    {"crdtToChange",     crdtToChange},
+                    {"fontSize", fontSize}
+            };
+        }
+        if(js.contains("bold")){
+            bool bold = js.at("bold").get<bool>();
+            style.setBold(bold);
+            j = json{
+                    {"response","styleChanged"},
+                    {"usernameToChange", usernameToChange},
+                    {"charToChange",     charToChange},
+                    {"crdtToChange",     crdtToChange},
+                    {"bold", bold}
+            };
+        }
+        if(js.contains("underlined")){
+            bool underlined = js.at("underlined").get<bool>();
+            style.setBold(underlined);
+            j = json{
+                    {"response","styleChanged"},
+                    {"usernameToChange", usernameToChange},
+                    {"charToChange",     charToChange},
+                    {"crdtToChange",     crdtToChange},
+                    {"underlined", underlined}
+            };
+        }
+        if(js.contains("italic")){
+            bool italic = js.at("italic").get<bool>();
+            style.setBold(italic);
+            j = json{
+                    {"response","styleChanged"},
+                    {"usernameToChange", usernameToChange},
+                    {"charToChange",     charToChange},
+                    {"crdtToChange",     crdtToChange},
+                    {"italic", italic}
+            };
+        }
+        //TO DO: devo scorrere il mio vettore e trovarci quei caratteri e settargli in get style, quel setfontFamily
+        int startIndex = crdtToChange.front().front(); //posizione 1
+        int endIndex = crdtToChange.back().front(); //posizione finale
+
+
+        //TO DO:aggiornarli sul server
+        for(int i=startIndex; i<=endIndex; i++){
+            //symbols[i].setSymbolStyle(style);
+        }
+
+
+
+        sendAllOtherClientsOnFile(j.dump());
+        return j.dump();
+    }else if (type_request == "insertAndStyle") {
+        //prendo il vettore di symbol
+        std::vector<std::string> usernameToInsert = js.at("usernameToInsert").get<std::vector<std::string>>();
+        std::vector<char> charToInsert = js.at("charToInsert").get<std::vector<char>>();
+        std::vector<std::vector<int>> crdtToInsert = js.at("crdtToInsert").get<std::vector<std::vector<int>>>();
+        std::string fontFamily = js.at("fontFamily").get<std::string>();
+        int fontSize = js.at("fontSize").get<int>();
+        bool bold = js.at("bold").get<bool>();
+        bool italic = js.at("italic").get<bool>();
+        bool underlined = js.at("underlined").get<bool>();
+        //TO DO: non dovrebbe esserci solo un elmento?
+        for (int i = 0; i < usernameToInsert.size(); i++) {
+            //ricreo il simbolo
+            Style style = {bold, underlined, italic, fontFamily, fontSize};
+            //Symbol symbolToInsert(charToInsert[i], usernameToInsert[i], crdtToInsert[i]);
+            Symbol symbolToInsert(charToInsert[i], usernameToInsert[i], crdtToInsert[i], style);
+            int index = Server::getInstance().generateIndexCRDT(symbolToInsert, shared_from_this()->getCurrentFile(), 0,
+                                                                -1, -1);
+            //aggiungo al crdt
+            Server::getInstance().insertSymbolIndex(symbolToInsert, index, shared_from_this()->getCurrentFile());
+            Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false);
+        }
+
+        json j = json{{"response",         "insertAndStyle_res"},
+                      {"usernameToInsert", usernameToInsert},
+                      {"charToInsert",     charToInsert},
+                      {"crdtToInsert",     crdtToInsert},
+                      {"bold", bold},
+                      {"italic", italic},
+                      {"underlined",underlined},
+                      {"fontFamily", fontFamily},
+                      {"fontSize", fontSize}};
+        sendAllOtherClientsOnFile(j.dump());
+        return j.dump();
+    }else {
         std::cout << "nessun match col tipo di richiesta" << std::endl;
         json j = json{{"response", "general_error"}};
         return j.dump();
