@@ -53,7 +53,7 @@ public:
 
     std::string getInvitation(const std::string& owner, const std::string& filename);
 
-    std::string handleEditProfile(const std::string &user,const std::string &oldUser,const std::string &email,const std::string &newPassword,const std::string &oldPassword);
+    std::string handleEditProfile(const std::string &user, const std::string &email,const std::string &newPassword,const std::string &oldPassword);
 };
 
 

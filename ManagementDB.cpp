@@ -360,242 +360,65 @@ std::string ManagementDB::getInvitation(const std::string &owner, const std::str
         return "CONNESSION_ERROR_";
 }
 
-std::string ManagementDB::handleEditProfile(const std::string &user,const std::string &oldUser,const std::string &email,const std::string &newPassword,const std::string &oldPassword) {
+std::string ManagementDB::handleEditProfile(const std::string &user,const std::string &email,const std::string &newPassword,const std::string &oldPassword) {
     QSqlDatabase db = connect();
 
     if (db.open()) {
         QSqlQuery query;
 
-        QString vecchioUser = QString::fromUtf8(oldUser.data(), oldUser.size());
-        QString nuovoUser = QString::fromUtf8(user.data(), user.size());
-        QString address = QString::fromUtf8(email.data(), email.size());
-        QString vecchiaPassword = QString::fromUtf8(oldPassword.data(), oldPassword.size());
-        QString nuovaPassword = QString::fromUtf8(newPassword.data(), newPassword.size());
+        QString qUser = QString::fromUtf8(user.data(), user.size());
+        QString qEmail = QString::fromUtf8(email.data(), email.size());
+        QString qSaltedOldPassword, qSaltedNewPassword;
+        std::string sale;
 
-        if(nuovoUser == "" && nuovaPassword == ""){
-            //modifica solo email, nessun controllo
-            query.prepare("UPDATE user_login SET email = '" + address + "' WHERE username ='" + vecchioUser + "'");
-            if (query.exec()) {
-                db.close();
-                return "EMAIL_UPDATE_SUCCESS";
-            } else {
-                db.close();
-                std::cout << "\n rinomina fallita\n";
-                return "PROFILE_UPDATE_FAILED";
+        //prendo sale e salo le password
+        query.prepare("SELECT sale FROM user_login WHERE username = '" + qUser + "'");
+        if (query.exec()) {
+            if (query.next()) {
+                sale = query.value(0).toString().toStdString();
+                std::string saltedOldPassword = md5(oldPassword + sale);
+                qSaltedOldPassword = QString::fromUtf8(saltedOldPassword.data(), saltedOldPassword.size());
             }
-
-        }else if (address == "" && nuovaPassword == ""){
-            //modifico solo username, controllo doppio user
-            query.prepare("SELECT username FROM user_login WHERE username='" + nuovoUser + "'");
-            QSqlQuery query2;
-            query2.prepare("UPDATE files SET username = '" + nuovoUser + "' WHERE username ='" + vecchioUser + "'");
-            QSqlQuery query3;
-            query3.prepare("UPDATE files SET owner = '" + nuovoUser + "' WHERE owner ='" + vecchioUser + "'");
-            if (query.exec() ) {
-                if (query.next())
-                    return "SIGNUP_ERROR_DUPLICATE_USERNAME";
-                else {
-                    query.prepare("UPDATE user_login SET username = '" + nuovoUser + "' WHERE username ='" + vecchioUser + "'");
-                    if (query.exec() && query2.exec() && query3.exec()) {
-                        db.close();
-                        return "USER_UPDATE_SUCCESS";
-                    } else {
-                        db.close();
-                        std::cout << "\n rinomina fallita\n";
-                        return "PROFILE_UPDATE_FAILED";
-                    }
-                }
-            }
-        }else if (address == "" && nuovoUser == ""){
-            //modifico solo password, controllo corrispondenza vecchia password vecchio username
-            query.prepare("SELECT sale FROM user_login WHERE username = '" + vecchioUser + "'");
-            if (query.exec()) {
-                if (query.next()) {
-                    QString sale = query.value(0).toString();
-                    std::string saltedPassword = md5(oldPassword + sale.toUtf8().constData());
-                    QString psw = QString::fromUtf8(saltedPassword.data(), saltedPassword.size());
-                    query.prepare(
-                            "SELECT color, email FROM user_login WHERE username='" + vecchioUser +
-                            "' and password='" +
-                            vecchiaPassword + "'");
-                    if (query.exec()) {
-                        if (query.next()) {
-                            // c corrispondenza tra username e password
-                            //metto il sale alla nuova password
-                            std::srand(std::time(nullptr));
-                            std::string sale = std::to_string(std::rand());
-                            QString qsale = QString::fromStdString(sale);
-                            std::string saltedPassword = newPassword + sale;
-                            saltedPassword = md5(saltedPassword);
-                            QString password = QString::fromStdString(saltedPassword);
-                            query.prepare("UPDATE user_login SET password = '" + password + "',sale = '"+qsale+"' WHERE username ='" + vecchioUser + "'");
-                            if (query.exec()){
-                                db.close();
-                                return "PASSWORD_UPDATE_SUCCESS";
-                            }else {
-                                db.close();
-                                return "PROFILE_UPDATE_FAILED";
-                            }
-
-                        }
-                    }
-                }
-            }
+        } else {
             db.close();
-            return "PROFILE_UPDATE_FAILED";
-        }else if (nuovaPassword == ""){
-            //modifico username e mail,controllo doppio username
-            query.prepare("SELECT username FROM user_login WHERE username='" + nuovoUser + "'");
-            if (query.exec()) {
-                if (query.next())
-                    return "SIGNUP_ERROR_DUPLICATE_USERNAME";
-                else {
-                    query.prepare("UPDATE user_login SET username = '" + nuovoUser + "' ,email = '"+address + "' WHERE username ='" + vecchioUser + "'");
-                    if (query.exec()) {
-                        db.close();
-                        return "USER_EMAIL_UPDATE_SUCCESS";
-                    } else {
-                        db.close();
-                        std::cout << "\n rinomina fallita\n";
-                        return "PROFILE_UPDATE_FAILED";
-                    }
-
+            return "QUERY_FAILED";
+        }
+        //controllo corrispondenza vecchia password
+        query.clear();
+        query.prepare("SELECT password FROM user_login WHERE username = '" + qUser + "'");
+        if (query.exec()) {
+            if (query.next()) {
+                if(query.value(0).toString() != qSaltedOldPassword) {
+                    return "WRONG_OLD_PASSWORD";
                 }
             }
-        }else if(nuovoUser == ""){
-            //modifico password e mail, controllo corrispondenza password
-            query.prepare("SELECT sale FROM user_login WHERE username = '" + vecchioUser + "'");
-            if (query.exec()) {
-                if (query.next()) {
-                    QString sale = query.value(0).toString();
-                    std::string saltedPassword = md5(oldPassword + sale.toUtf8().constData());
-                    QString psw = QString::fromUtf8(saltedPassword.data(), saltedPassword.size());
-                    query.prepare(
-                            "SELECT color, email FROM user_login WHERE username='" + vecchioUser +
-                            "' and password='" +
-                            vecchiaPassword + "'");
-                    if (query.exec()) {
-                        if (query.next()) {
-                            // c corrispondenza tra username e password
-                            //metto il sale alla nuova password
-                            std::srand(std::time(nullptr));
-                            std::string sale = std::to_string(std::rand());
-                            QString qsale = QString::fromStdString(sale);
-                            std::string saltedPassword = newPassword + sale;
-                            saltedPassword = md5(saltedPassword);
-                            QString password = QString::fromStdString(saltedPassword);
-                            query.prepare("UPDATE user_login SET password = '" + password +"',email ='" + address + "',sale = '"+qsale+"' WHERE username ='" + vecchioUser + "'");
-                            if (query.exec()){
-                                db.close();
-                                return "PASSWORD_EMAIL_UPDATE_SUCCESS";
-                            }else {
-                                db.close();
-                                return "PROFILE_UPDATE_FAILED";
-                            }
-
-                        }
-                    }
-                }
-            }
+        } else {
             db.close();
-            return "PROFILE_UPDATE_FAILED";
-        }else if(address == ""){
-            //modifico password e user,controllo doppio
-            query.prepare("SELECT username FROM user_login WHERE username='" + nuovoUser + "'");
-            if (query.exec()) {
-                if (query.next())
-                    return "SIGNUP_ERROR_DUPLICATE_USERNAME";
-                else {
-                    //controllato doppio user
-                    query.prepare("SELECT sale FROM user_login WHERE username = '" + vecchioUser + "'");
-                    if (query.exec()) {
-                        if (query.next()) {
-                            QString sale = query.value(0).toString();
-                            std::string saltedPassword = md5(oldPassword + sale.toUtf8().constData());
-                            QString psw = QString::fromUtf8(saltedPassword.data(), saltedPassword.size());
-                            query.prepare(
-                                    "SELECT color, email FROM user_login WHERE username='" + vecchioUser +
-                                    "' and password='" +
-                                    vecchiaPassword + "'");
-                            if (query.exec()) {
-                                if (query.next()) {
-                                    // c corrispondenza tra username e password
-                                    //metto il sale alla nuova password
-                                    std::srand(std::time(nullptr));
-                                    std::string sale = std::to_string(std::rand());
-                                    QString qsale = QString::fromStdString(sale);
-                                    std::string saltedPassword = newPassword + sale;
-                                    saltedPassword = md5(saltedPassword);
-                                    QString password = QString::fromStdString(saltedPassword);
-                                    query.prepare("UPDATE user_login SET password = '" + password +"',username ='" + nuovoUser + "',sale = '"+qsale+"' WHERE username ='" + vecchioUser + "'");
-                                    if (query.exec()){
-                                        db.close();
-                                        return "PASSWORD_USER_UPDATE_SUCCESS";
-                                    }else {
-                                        db.close();
-                                        return "PROFILE_UPDATE_FAILED";
-                                    }
-
-                                }
-                            }
-                        }
-                    }
-                    db.close();
-                    return "PROFILE_UPDATE_FAILED";
-
-                }
+            return "QUERY_FAILED";
+        }
+        //update email
+        if(!email.empty()) {
+            query.clear();
+            query.prepare("UPDATE user_login SET email = '" + qEmail + "' WHERE username = '" + qUser + "'");
+            if (!query.exec()) {
+                db.close();
+                return "QUERY_FAILED";
             }
-        }else{
-            //modifico tutto
-            query.prepare("SELECT username FROM user_login WHERE username='" + nuovoUser + "'");
-            if (query.exec()) {
-                if (query.next())
-                    return "SIGNUP_ERROR_DUPLICATE_USERNAME";
-                else {
-                    //controllato doppio user
-                    query.prepare("SELECT sale FROM user_login WHERE username = '" + vecchioUser + "'");
-                    if (query.exec()) {
-                        if (query.next()) {
-                            QString sale = query.value(0).toString();
-                            std::string saltedPassword = md5(oldPassword + sale.toUtf8().constData());
-                            QString psw = QString::fromUtf8(saltedPassword.data(), saltedPassword.size());
-                            query.prepare(
-                                    "SELECT color, email FROM user_login WHERE username='" + vecchioUser +
-                                    "' and password='" +
-                                    vecchiaPassword + "'");
-                            if (query.exec()) {
-                                if (query.next()) {
-                                    // c corrispondenza tra username e password
-                                    //metto il sale alla nuova password
-                                    std::srand(std::time(nullptr));
-                                    std::string sale = std::to_string(std::rand());
-                                    QString qsale = QString::fromStdString(sale);
-                                    std::string saltedPassword = newPassword + sale;
-                                    saltedPassword = md5(saltedPassword);
-                                    QString password = QString::fromStdString(saltedPassword);
-                                    query.prepare("UPDATE user_login SET password = '" + password +"',email = '"+address+"',username ='" + nuovoUser + "',sale = '"+qsale+"' WHERE username ='" + vecchioUser + "'");
-                                    if (query.exec()){
-                                        db.close();
-                                        return "PROFILE_UPDATE_SUCCESS";
-                                    }else {
-                                        db.close();
-                                        return "PROFILE_UPDATE_FAILED";
-                                    }
-
-                                }
-                            }
-                        }
-                    }
-                    db.close();
-                    return "PROFILE_UPDATE_FAILED";
-
-                }
+        }
+        //update password
+        if(!newPassword.empty()) {
+            std::string saltedNewPassword = md5(newPassword + sale);
+            qSaltedNewPassword = QString::fromUtf8(saltedNewPassword.data(), saltedNewPassword.size());
+            query.clear();
+            query.prepare("UPDATE user_login SET password = '" + qSaltedNewPassword + "' WHERE username = '" + qUser + "'");
+            if (!query.exec()) {
+                db.close();
+                return "QUERY_FAILED";
             }
         }
 
+        return "EDIT_SUCCESS";
 
-    }else {
+    } else
         return "CONNESSION_ERROR_";
-    }
-    //return std::__cxx11::string();
 }
