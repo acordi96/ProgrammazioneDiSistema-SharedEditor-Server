@@ -5,8 +5,12 @@
 #ifndef SERVERPDS_STYLE_H
 #define SERVERPDS_STYLE_H
 #define DEFAULT_FONT_FAMILY "Times New Roman"
-#define DEFAULT_FONT_SIZE 14
 #define DEFAULT_COLOR "#00ffffff"
+#ifdef __linux__
+#define DEFAULT_FONT_SIZE 11
+#else //winzoz
+#define DEFAULT_FONT_SIZE 9
+#endif
 
 #include <string>
 
@@ -20,7 +24,9 @@ private:
     std::string color;
 public:
     Style();
+
     Style(bool bold, bool underlined, bool italic, std::string fontFamily, int fontSize);
+
     bool isBold() const;
 
     void setBold(bool bold);
@@ -45,4 +51,5 @@ public:
 
     void setColor(const std::string &color);
 };
+
 #endif //SERVERPDS_STYLE_H

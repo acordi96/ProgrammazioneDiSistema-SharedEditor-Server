@@ -147,7 +147,7 @@ void HandleRequest::do_write() {
 
 std::string HandleRequest::handleRequestType(const json &js, const std::string &type_request) {
 
-#ifdef Q_OS_LINUX //linux
+#ifdef __linux__
     std::string pathFilesystem = boost::filesystem::current_path().string();
     pathFilesystem = pathFilesystem.substr(0, pathFilesystem.find_last_of('/')); //esce da cartella cmake
     pathFilesystem += "/Filesystem";
@@ -226,7 +226,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                       << username
                       << ") SIGNUP SUCCESS, COLOR GENERATED: " << colorParticiapant << std::endl;
 
-#ifdef Q_OS_LINUX //linux
+#ifdef __linux__
             boost::filesystem::create_directory(pathFilesystem + "/" + username);
 #else //winzoz
             boost::filesystem::create_directory(pathFilesystem + "\\" + username);
@@ -401,7 +401,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             return j.dump();
         }
 
-#ifdef Q_OS_LINUX //linux
+#ifdef __linux__
         boost::filesystem::path personalDir(pathFilesystem + "/" + js.at("username").get<std::string>());
 #else //winzoz
         boost::filesystem::path personalDir(pathFilesystem + "\\" + js.at("username").get<std::string>());
@@ -410,7 +410,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             //creazione cartella personale
             boost::filesystem::create_directory(personalDir);
         }
-#ifdef Q_OS_LINUX //linux
+#ifdef __linux__
         std::string filename =
                 pathFilesystem + "/" + js.at("username").get<std::string>() + "/" + js.at("name").get<std::string>() +
                 ".txt";
@@ -467,7 +467,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                                                                        shared_from_this()->getUsername(),
                                                                        js.at("name").get<std::string>());
         if (resDB == "FILE_OPEN_SUCCESS") {
-#ifdef Q_OS_LINUX //linux
+#ifdef __linux__
             std::string filename = pathFilesystem + "/" + js.at("username").get<std::string>() + "/" +
                                    js.at("name").get<std::string>() + ".txt";
 #else //winzoz
@@ -635,7 +635,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         //bisognerebbe anche gestire la concorrenza, altri utenti potrebbero aver il file
         //già aperto, in questo caso non è possibile cambiare il nome
 
-#ifdef Q_OS_LINUX //linux
+#ifdef __linux__
         std::string new_path = pathFilesystem + "/" + js.at("username").get<std::string>() + "/" +
                                js.at("new_name").get<std::string>() + ".txt";
         std::string old_path = pathFilesystem + "/" + js.at("username").get<std::string>() + "/" +
@@ -687,7 +687,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
 
     } else if (type_request == "delete_file") {
-#ifdef Q_OS_LINUX //linux
+#ifdef __linux__
         std::string filename =
                 pathFilesystem + "/" + js.at("username").get<std::string>() + "/" + js.at("name").get<std::string>() +
                 ".txt";
