@@ -302,12 +302,13 @@ void Server::insertSymbolIndex(const Symbol &symbol, int index, const std::strin
 
 void Server::eraseSymbolCRDT(std::vector<Symbol> symbolsToErase, const std::string &filename) {
     int lastFound = 0;
-    int missed = 0;
     for (auto iterSymbolsToErase = symbolsToErase.begin();
          iterSymbolsToErase != symbolsToErase.end(); ++iterSymbolsToErase) {
-        int count = lastFound;
         if ((lastFound - 2) >= 0)
             lastFound -= 2;
+        else if ((lastFound - 1) >= 0)
+            lastFound--;
+        int count = lastFound;
         bool foundSecondPart = false;
         for (auto iterSymbols = this->symbolsPerFile.at(filename).begin() + lastFound; iterSymbols !=
                                                                                        this->symbolsPerFile.at(

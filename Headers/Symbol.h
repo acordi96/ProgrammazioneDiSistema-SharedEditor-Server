@@ -16,11 +16,12 @@ private:
     char character;
     std::string username;
     std::vector<int> posizione;
-    Style symbolStyle;
 public:
     Symbol(char car, std::string usr, std::vector<int> pos);
     Symbol(char car, std::string usr, std::vector<int> pos, Style style);
     Symbol();
+
+    Style symbolStyle;
 
     const Style &getSymbolStyle() const;
 

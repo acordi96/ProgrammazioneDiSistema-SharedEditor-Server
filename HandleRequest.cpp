@@ -732,78 +732,37 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         std::vector<char> charToChange = js.at("charToChange").get<std::vector<char>>();
         std::vector<std::vector<int>> crdtToChange = js.at("crdtToChange").get<std::vector<std::vector<int>>>();
 
-        json j;
-        Style style;
-        if(js.contains("fontFamily")){
-            std::string fontFamily = js.at("fontFamily").get<std::string>();
-            style.setFontFamily(fontFamily);
-            j = json{
-                    {"response","styleChanged"},
-                    {"usernameToChange", usernameToChange},
-                    {"charToChange",     charToChange},
-                    {"crdtToChange",     crdtToChange},
-                    {"fontFamily",     fontFamily}
-            };
-        }
-        if(js.contains("fontSize")){
-            int fontSize = js.at("fontSize").get<int>();
-            style.setFontSize(fontSize);
-            j = json{
-                    {"response","styleChanged"},
-                    {"usernameToChange", usernameToChange},
-                    {"charToChange",     charToChange},
-                    {"crdtToChange",     crdtToChange},
-                    {"fontSize", fontSize}
-            };
-        }
-        if(js.contains("bold")){
-            bool bold = js.at("bold").get<bool>();
-            style.setBold(bold);
-            j = json{
-                    {"response","styleChanged"},
-                    {"usernameToChange", usernameToChange},
-                    {"charToChange",     charToChange},
-                    {"crdtToChange",     crdtToChange},
-                    {"bold", bold}
-            };
-        }
-        if(js.contains("underlined")){
-            bool underlined = js.at("underlined").get<bool>();
-            style.setBold(underlined);
-            j = json{
-                    {"response","styleChanged"},
-                    {"usernameToChange", usernameToChange},
-                    {"charToChange",     charToChange},
-                    {"crdtToChange",     crdtToChange},
-                    {"underlined", underlined}
-            };
-        }
-        if(js.contains("italic")){
-            bool italic = js.at("italic").get<bool>();
-            style.setBold(italic);
-            j = json{
-                    {"response","styleChanged"},
-                    {"usernameToChange", usernameToChange},
-                    {"charToChange",     charToChange},
-                    {"crdtToChange",     crdtToChange},
-                    {"italic", italic}
-            };
-        }
+        json j = json{{"response",         "styleChanged"},
+                      {"usernameToChange", usernameToChange},
+                      {"charToChange",     charToChange},
+                      {"crdtToChange",     crdtToChange}
+        };
+        if (js.contains("bold"))
+            j["bold"] = js.at("bold").get<bool>();
+        if (js.contains("italic"))
+            j["italic"] = js.at("italic").get<bool>();
+        if (js.contains("underlined"))
+            j["underlined"] = js.at("underlined").get<bool>();
+        if (js.contains("color"))
+            j["color"] = js.at("color").get<std::string>();
+        if (js.contains("fontFamily"))
+            j["fontFamily"] = js.at("fontFalimy").get<std::string>();
+
+        //TODO: aggiornare sul server
         //TO DO: devo scorrere il mio vettore e trovarci quei caratteri e settargli in get style, quel setfontFamily
         int startIndex = crdtToChange.front().front(); //posizione 1
         int endIndex = crdtToChange.back().front(); //posizione finale
 
 
         //TO DO:aggiornarli sul server
-        for(int i=startIndex; i<=endIndex; i++){
+        for (int i = startIndex; i <= endIndex; i++) {
             //symbols[i].setSymbolStyle(style);
         }
 
 
-
         sendAllOtherClientsOnFile(j.dump());
         return j.dump();
-    }else if (type_request == "insertAndStyle") {
+    } else if (type_request == "insertAndStyle") {
         //prendo il vettore di symbol
         std::vector<std::string> usernameToInsert = js.at("usernameToInsert").get<std::vector<std::string>>();
         std::vector<char> charToInsert = js.at("charToInsert").get<std::vector<char>>();
@@ -830,14 +789,14 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                       {"usernameToInsert", usernameToInsert},
                       {"charToInsert",     charToInsert},
                       {"crdtToInsert",     crdtToInsert},
-                      {"bold", bold},
-                      {"italic", italic},
-                      {"underlined",underlined},
-                      {"fontFamily", fontFamily},
-                      {"fontSize", fontSize}};
+                      {"bold",             bold},
+                      {"italic",           italic},
+                      {"underlined",       underlined},
+                      {"fontFamily",       fontFamily},
+                      {"fontSize",         fontSize}};
         sendAllOtherClientsOnFile(j.dump());
         return j.dump();
-    }else {
+    } else {
         std::cout << "nessun match col tipo di richiesta" << std::endl;
         json j = json{{"response", "general_error"}};
         return j.dump();
