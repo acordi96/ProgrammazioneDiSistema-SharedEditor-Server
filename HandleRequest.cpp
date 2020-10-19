@@ -64,12 +64,12 @@ void HandleRequest::do_read_body() {
                                     }
                                     std::string requestType = messageFromClient.at("operation").get<std::string>();
                                     std::string response;
-                                    //try {
-                                    response = handleRequestType(messageFromClient, requestType);
-                                    /*} catch (...) {
+                                    try {
+                                        response = handleRequestType(messageFromClient, requestType);
+                                    } catch (...) {
                                         std::cout << "handleRequest ERROR: " << errno << std::endl;
                                         sendAtClient(json{{"response", "handleRequest ERROR"}}.dump());
-                                    }*/
+                                    }
 
                                     do_read_header();
                                 } else {
@@ -353,7 +353,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
     } else if (type_request == "insert") {
         //prendo il vettore di symbol
         std::vector<std::string> usernameToInsert = js.at("usernameToInsert").get<std::vector<std::string>>();
-        std::vector<char> charToInsert = js.at("charToInsert").get<std::vector<char>>();
+        std::vector<wchar_t> charToInsert = js.at("charToInsert").get<std::vector<wchar_t>>();
         std::vector<std::vector<int>> crdtToInsert = js.at("crdtToInsert").get<std::vector<std::vector<int>>>();
         for (int i = 0; i < usernameToInsert.size(); i++) {
             //ricreo il simbolo
@@ -375,7 +375,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         //prendo il vettore di symbol
         std::vector<Symbol> symbolsToErase;
         std::vector<std::string> usernameToErase = js.at("usernameToErase").get<std::vector<std::string>>();
-        std::vector<char> charToErase = js.at("charToErase").get<std::vector<char>>();
+        std::vector<wchar_t> charToErase = js.at("charToErase").get<std::vector<wchar_t>>();
         std::vector<std::vector<int>> crdtToErase = js.at("crdtToErase").get<std::vector<std::vector<int>>>();
         for (int i = 0; i < usernameToErase.size(); i++)
             symbolsToErase.emplace_back(charToErase[i], usernameToErase[i], crdtToErase[i]);
@@ -487,24 +487,37 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                           << std::endl;
                 int of = dim / maxBufferSymbol;
                 int i = 0;
-                std::vector<std::string> usernameToInsert;
-                std::vector<char> charToInsert;
+                std::vector<int> usernameToInsert;
+                std::vector<wchar_t> charToInsert;
                 std::vector<std::vector<int>> crdtToInsert;
+                std::map<std::string, int> usernameToId;
+                int countId = 0;
                 while ((i + 1) * maxBufferSymbol <= dim) {
                     usernameToInsert.clear();
                     charToInsert.clear();
                     crdtToInsert.clear();
                     for (int k = 0; k < maxBufferSymbol; k++) {
+                        if (usernameToId.find(symbols[(i * maxBufferSymbol) + k].getUsername()) == usernameToId.end())
+                            usernameToId.insert(
+                                    {symbols[(i * maxBufferSymbol) + k].getUsername(), countId++});
+
+                        usernameToInsert.push_back(
+                                usernameToId.at(symbols[(i * maxBufferSymbol) + k].getUsername()));
+
                         charToInsert.push_back(symbols[(i * maxBufferSymbol) + k].getCharacter());
-                        usernameToInsert.push_back(symbols[(i * maxBufferSymbol) + k].getUsername());
                         crdtToInsert.push_back(symbols[(i * maxBufferSymbol) + k].getPosizione());
                     }
+                    std::vector<std::string> idToUsername;
+                    while (idToUsername.size() != usernameToId.size())
+                        for (auto &pair : usernameToId)
+                            if (pair.second == idToUsername.size())
+                                idToUsername.push_back(pair.first);
+
                     json j = json{{"response",         "open_file"},
-                                  {"partToWrite",      i},
-                                  {"ofPartToWrite",    of},
                                   {"usernameToInsert", usernameToInsert},
                                   {"charToInsert",     charToInsert},
-                                  {"crdtToInsert",     crdtToInsert}};
+                                  {"crdtToInsert",     crdtToInsert},
+                                  {"usernameToId",     idToUsername}};
                     sendAtClient(j.dump());
                     i++;
                 }
@@ -512,75 +525,92 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 charToInsert.clear();
                 crdtToInsert.clear();
                 for (int k = 0; k < (dim % maxBufferSymbol); k++) {
+                    if (usernameToId.find(symbols[(of * maxBufferSymbol) + k].getUsername()) == usernameToId.end())
+                        usernameToId.insert(
+                                {symbols[(of * maxBufferSymbol) + k].getUsername(), countId++});
+                    usernameToInsert.push_back(usernameToId.at(symbols[(of * maxBufferSymbol) + k].getUsername()));
+
                     charToInsert.push_back(symbols[(of * maxBufferSymbol) + k].getCharacter());
-                    usernameToInsert.push_back(symbols[(of * maxBufferSymbol) + k].getUsername());
                     crdtToInsert.push_back(symbols[(of * maxBufferSymbol) + k].getPosizione());
                 }
+                std::vector<std::string> idToUsername;
+                while (idToUsername.size() != usernameToId.size())
+                    for (auto &pair : usernameToId)
+                        if (pair.second == idToUsername.size())
+                            idToUsername.push_back(pair.first);
                 json j = json{{"response",         "open_file"},
-                              {"partToWrite",      of},
-                              {"ofPartToWrite",    of},
                               {"usernameToInsert", usernameToInsert},
                               {"charToInsert",     charToInsert},
-                              {"crdtToInsert",     crdtToInsert}};
+                              {"crdtToInsert",     crdtToInsert},
+                              {"usernameToId",     idToUsername},
+                              {"endOpenFile",      "finished"}};
                 sendAtClient(j.dump());
+
+                std::cout << SocketManager::output() << "CLIENT " << this->getId() << " ("
+                          << this->getUsername() << ") OPEN (NOT NEW) FILE (" << dim << " char): " << filename
+                          << std::endl;
+
             } else { //prima volta che il file viene aperto (lettura da file)
                 Server::getInstance().openFile(filename, shared_from_this()->getUsername());
                 std::ifstream file;
                 file.open(filename);
-                std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
-                int dim = in.tellg();
-                std::cout << SocketManager::output() << "CLIENT " << this->getId() << " ("
-                          << this->getUsername() << ") OPEN (NEW) FILE (" << dim << " char): " << filename << std::endl;
-                char toWrite[maxBufferSymbol];
-                int of = dim / maxBufferSymbol;
-                int i = 0;
-                std::vector<std::string> usernameToInsert;
-                std::vector<char> charToInsert;
+                std::vector<int> usernameToInsert;
+                std::vector<wchar_t> charToInsert;
                 std::vector<std::vector<int>> crdtToInsert;
-                while ((i + 1) * maxBufferSymbol <= dim) {
-                    usernameToInsert.clear();
-                    charToInsert.clear();
-                    crdtToInsert.clear();
-                    file.read(toWrite, maxBufferSymbol);
-                    for (int k = 0; k < maxBufferSymbol; k++) {
-                        std::vector<int> crdt = Server::getInstance().insertSymbolNewCRDT((i * maxBufferSymbol) + k,
-                                                                                          toWrite[k], "",
-                                                                                          shared_from_this()->getCurrentFile());
-                        charToInsert.push_back(toWrite[k]);
-                        usernameToInsert.push_back("");
-                        crdtToInsert.push_back(crdt);
+                json jline;
+                std::string line;
+                int dim = 0;
+                int symbolCount = 0;
+                std::map<std::string, int> usernameToId;
+                int countId = 0;
+                while (std::getline(file, line)) {
+                    jline = json::parse(line);
+                    if (usernameToId.find(jline.at("username").get<std::string>()) == usernameToId.end())
+                        usernameToId.insert({jline.at("username").get<std::string>(), countId++});
+                    usernameToInsert.push_back(usernameToId.at(jline.at("username").get<std::string>()));
+
+                    charToInsert.push_back(jline.at("character").get<wchar_t>());
+                    crdtToInsert.push_back(jline.at("posizione").get<std::vector<int>>());
+                    Server::getInstance().insertSymbolIndex(
+                            Symbol(jline.at("character").get<wchar_t>(), jline.at("username").get<std::string>(),
+                                   jline.at("posizione").get<std::vector<int>>()), dim++, filename);
+                    if (symbolCount++ == maxBufferSymbol) {
+                        std::vector<std::string> idToUsername;
+                        while (idToUsername.size() != usernameToId.size())
+                            for (auto &pair : usernameToId)
+                                if (pair.second == idToUsername.size())
+                                    idToUsername.push_back(pair.first);
+                        json j = json{{"response",         "open_file"},
+                                      {"usernameToInsert", usernameToInsert},
+                                      {"charToInsert",     charToInsert},
+                                      {"crdtToInsert",     crdtToInsert},
+                                      {"usernameToId",     idToUsername}};
+                        sendAtClient(j.dump());
+                        symbolCount = 0;
+                        usernameToInsert.clear();
+                        charToInsert.clear();
+                        crdtToInsert.clear();
                     }
-                    json j = json{{"response",         "open_file"},
-                                  {"partToWrite",      i},
-                                  {"ofPartToWrite",    of},
-                                  {"usernameToInsert", usernameToInsert},
-                                  {"charToInsert",     charToInsert},
-                                  {"crdtToInsert",     crdtToInsert}};
-                    sendAtClient(j.dump());
-                    i++;
                 }
-                usernameToInsert.clear();
-                charToInsert.clear();
-                crdtToInsert.clear();
-                char toWrite2[(dim % maxBufferSymbol) + 1];
-                file.read(toWrite2, dim % maxBufferSymbol);
-                // scrive Symbol nel file nella mappa della room
-                for (int k = 0; k < (dim % maxBufferSymbol); k++) {
-                    std::vector<int> crdt = Server::getInstance().insertSymbolNewCRDT((of * maxBufferSymbol) + k,
-                                                                                      toWrite2[k], "",
-                                                                                      shared_from_this()->getCurrentFile());
-                    charToInsert.push_back(toWrite2[k]);
-                    usernameToInsert.push_back("");
-                    crdtToInsert.push_back(crdt);
-                }
+                std::vector<std::string> idToUsername;
+                while (idToUsername.size() != usernameToId.size())
+                    for (auto &pair : usernameToId)
+                        if (pair.second == idToUsername.size())
+                            idToUsername.push_back(pair.first);
                 json j = json{{"response",         "open_file"},
-                              {"partToWrite",      of},
-                              {"ofPartToWrite",    of},
                               {"usernameToInsert", usernameToInsert},
                               {"charToInsert",     charToInsert},
-                              {"crdtToInsert",     crdtToInsert}};
+                              {"crdtToInsert",     crdtToInsert},
+                              {"usernameToId",     idToUsername},
+                              {"endOpenFile",      "finished"}};
                 sendAtClient(j.dump());
+
+                std::cout << SocketManager::output() << "CLIENT " << this->getId() << " ("
+                          << this->getUsername() << ") OPEN (NEW) FILE (" << dim << " char): " << filename << std::endl;
+
             }
+            //Server::getInstance().printCRDT(filename); //debug
+
             //aggiorna su ogni client lista di participant su questo file
             std::vector<std::string> usernamesInFile = Server::getInstance().getUsernamesInFile(filename);
             std::vector<std::string> colors = Server::getInstance().getColors(usernamesInFile);
@@ -670,7 +700,13 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
 
             boost::filesystem::rename(old_path, new_path);
-
+            std::string filenameRedableOld = old_path;
+            filenameRedableOld.erase(filenameRedableOld.size() - 4);
+            filenameRedableOld += "_readable.txt";
+            std::string filenameRedableNew = new_path;
+            filenameRedableNew.erase(filenameRedableNew.size() - 4);
+            filenameRedableNew += "_readable.txt";
+            boost::filesystem::rename(filenameRedableOld, filenameRedableNew);
 
             json j = json{{"response", "file_renamed"},
                           {"newName",  js.at("new_name").get<std::string>()},
@@ -689,7 +725,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
     } else if (type_request == "delete_file") {
 #ifdef __linux__
         std::string filename =
-                pathFilesystem + "/" + js.at("username").get<std::string>() + "/" + js.at("name").get<std::string>() +
+                pathFilesystem + "/" + js.at("username").get<std::string>() + "/" +
+                js.at("name").get<std::string>() +
                 ".txt";
 #else //winzoz
         std::string filename = pathFilesystem + "\\" + js.at("username").get<std::string>() + "\\" + js.at("name").get<std::string>() + ".txt";
@@ -709,6 +746,10 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                                                                          invited);
         if (resDB == "FILE_DELETE_SUCCESS") {
             boost::filesystem::remove(filename);
+            std::string filenameRedable = filename;
+            filenameRedable.erase(filenameRedable.size() - 4);
+            filenameRedable += "_readable.txt";
+            boost::filesystem::remove(filenameRedable);
             json j = json{{"response", "file_deleted"},
                           {"name",     js.at("name").get<std::string>()},
                           {"username", js.at("username").get<std::string>()},
@@ -722,6 +763,32 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             return j.dump();
         } else {
             json j = json{{"response", "ERRORE_ELIMINAZIONE_FILE"}};
+            sendAtClient(j.dump());
+            return j.dump();
+        }
+
+    } else if (type_request == "request_update_profile") {
+        std::string username, email, oldPassword, newPassword, color;
+
+        username = js.at("username").get<std::string>();
+        email = js.at("email").get<std::string>();
+        newPassword = js.at("newPassword").get<std::string>();
+        oldPassword = js.at("oldPassword").get<std::string>();
+        color = js.at("newColor").get<std::string>();
+
+        //devo creare in Managementdb una funzione handleEditProfile e fare le operazioni nel DB
+        std::string resDB = ManagementDB::getInstance().handleEditProfile(username, email, newPassword,
+                                                                          oldPassword, color);
+        if (resDB == "EDIT_SUCCESS") {
+            json j = json{{"response", resDB},
+                          {"username", username},
+                          {"email",    email},
+                          {"color",    color}};
+            sendAtClient(j.dump());
+            return j.dump();
+        } else {
+            json j = json{{"response", resDB},
+                          {"username", username}};
             sendAtClient(j.dump());
             return j.dump();
         }
@@ -801,7 +868,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         sendAllOtherClientsOnFile(j.dump());
         return j.dump();
     } else {
-        std::cout << "nessun match col tipo di richiesta" << std::endl;
+        std::cout << "nessun match col tipo di richiesta" <<
+                  std::endl;
         json j = json{{"response", "general_error"}};
         return j.dump();
     }

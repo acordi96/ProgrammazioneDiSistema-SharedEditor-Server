@@ -50,15 +50,13 @@ public:
 
     std::vector<std::string> getUsernamesInFile(const std::string &filename);
 
-    std::vector<int> insertSymbolNewCRDT(int index, char character, const std::string& username, const std::string& filename);
-
     int generateIndexCRDT(Symbol symbol, const std::string& filename, int iter, int start, int end);
 
     void eraseSymbolCRDT(std::vector<Symbol> symbolsToErase, const std::string& filename);
 
     void insertSymbolIndex(const Symbol& symbol, int index, const std::string& filename);
 
-    std::vector<int> generatePos(int index, std::string filename);
+    std::vector<int> generatePos(int index, const std::string& filename);
 
     std::vector<int> generatePosBetween(std::vector<int> pos1, std::vector<int> pos2, std::vector<int> newPos);
 
@@ -74,7 +72,9 @@ public:
 
     participant_ptr  getParticipant(const std::string &username);
 
-    int getOutputcount();
+    unsigned int getOutputcount();
+
+    void printCRDT(const std::string &filename);
 
 private:
     Server() = default;

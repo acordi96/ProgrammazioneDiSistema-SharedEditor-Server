@@ -52,6 +52,8 @@ public:
     std::pair<std::string, std::string> validateInvitation(const std::string &user, const std::string &code);
 
     std::string getInvitation(const std::string& owner, const std::string& filename);
+
+    std::string handleEditProfile(const std::string &user, const std::string &email,const std::string &newPassword,const std::string &oldPassword, const std::string & color);
 };
 
 

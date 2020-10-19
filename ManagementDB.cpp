@@ -221,9 +221,6 @@ ManagementDB::handleRenameFile(const std::string &user, const std::string &oldNa
             std::cout << "\n rinomina fallita\n";
             return "FILE_DELETE_FAILED";
         }
-        /*query.prepare(
-                "UPDATE files SET titolo = '" + nuovo + "' WHERE username ='" + id + "' and titolo = '" + vecchio +
-                "'");*/
         query.prepare(
                 "UPDATE files SET titolo = '" + nuovo + "' WHERE owner ='" + id + "' and titolo = '" + vecchio +
                 "'");
@@ -356,6 +353,72 @@ std::string ManagementDB::getInvitation(const std::string &owner, const std::str
         }
         db.close();
         return "QUERY_FAILED";
+    } else
+        return "CONNESSION_ERROR_";
+}
+
+std::string
+ManagementDB::handleEditProfile(const std::string &user, const std::string &email, const std::string &newPassword,
+                                const std::string &oldPassword, const std::string &color) {
+    QSqlDatabase db = connect();
+
+    if (db.open()) {
+        QSqlQuery query;
+
+        QString qUser = QString::fromUtf8(user.data(), user.size());
+        QString qEmail = QString::fromUtf8(email.data(), email.size());
+        QString qColor = QString::fromUtf8(color.data(), color.size());
+        QString qSaltedOldPassword, qSaltedNewPassword;
+        std::string sale;
+
+        //controllo corrispondenza vecchia password
+        query.prepare("SELECT sale, password FROM user_login WHERE username = '" + qUser + "'");
+        if (query.exec()) {
+            if (query.next()) {
+                sale = query.value(0).toString().toStdString();
+                std::string saltedPassword = md5(oldPassword + sale);
+                qSaltedOldPassword = QString::fromUtf8(saltedPassword.data(), saltedPassword.size());
+                if (query.value(1).toString() != qSaltedOldPassword) {
+                    return "WRONG_OLD_PASSWORD";
+                }
+            }
+        } else {
+            db.close();
+            return "EDIT_FAILED";
+        }
+        //update email
+        if (!email.empty()) {
+            query.clear();
+            query.prepare("UPDATE user_login SET email = '" + qEmail + "' WHERE username = '" + qUser + "'");
+            if (!query.exec()) {
+                db.close();
+                return "EDIT_FAILED";
+            }
+        }
+        //update password
+        if (!newPassword.empty()) {
+            std::string saltedNewPassword = md5(newPassword + sale);
+            qSaltedNewPassword = QString::fromUtf8(saltedNewPassword.data(), saltedNewPassword.size());
+            query.clear();
+            query.prepare(
+                    "UPDATE user_login SET password = '" + qSaltedNewPassword + "' WHERE username = '" + qUser + "'");
+            if (!query.exec()) {
+                db.close();
+                return "EDIT_FAILED";
+            }
+        }
+        //update color
+        if (!color.empty()) {
+            query.clear();
+            query.prepare("UPDATE user_login SET color = '" + qColor + "' WHERE username = '" + qUser + "'");
+            if (!query.exec()) {
+                db.close();
+                return "EDIT_FAILED";
+            }
+        }
+
+        return "EDIT_SUCCESS";
+
     } else
         return "CONNESSION_ERROR_";
 }

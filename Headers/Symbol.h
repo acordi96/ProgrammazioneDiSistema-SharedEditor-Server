@@ -13,12 +13,13 @@
 
 class Symbol {
 private:
-    char character;
+    wchar_t character;
     std::string username;
     std::vector<int> posizione;
 public:
-    Symbol(char car, std::string usr, std::vector<int> pos);
-    Symbol(char car, std::string usr, std::vector<int> pos, Style style);
+    Symbol(wchar_t car, std::string usr, std::vector<int> pos);
+    Symbol(wchar_t car, std::string usr, std::vector<int> pos, Style style);
+
     Symbol();
 
     Style symbolStyle;
@@ -39,9 +40,9 @@ public:
 
     void setUsername(std::string usr);
 
-    char getCharacter();
+    wchar_t getCharacter();
 
-    void setCharacter(char ch);
+    void setCharacter(wchar_t ch);
 
 };
 
