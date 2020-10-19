@@ -7,9 +7,9 @@
 #define DEFAULT_FONT_FAMILY "Times New Roman"
 #define DEFAULT_COLOR "#00ffffff"
 #ifdef __linux__
-#define DEFAULT_FONT_SIZE 11
+    #define DEFAULT_FONT_SIZE 11
 #else //winzoz
-#define DEFAULT_FONT_SIZE 9
+    #define DEFAULT_FONT_SIZE 9
 #endif
 
 #include <string>
@@ -25,7 +25,7 @@ private:
 public:
     Style();
 
-    Style(bool bold, bool underlined, bool italic, std::string fontFamily, int fontSize);
+    Style(bool bold, bool underlined, bool italic, std::string fontFamily, int fontSize, std::string color);
 
     bool isBold() const;
 
@@ -50,6 +50,7 @@ public:
     const std::string &getColor() const;
 
     void setColor(const std::string &color);
+
 };
 
 #endif //SERVERPDS_STYLE_H

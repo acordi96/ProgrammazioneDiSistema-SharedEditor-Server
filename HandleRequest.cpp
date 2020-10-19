@@ -732,7 +732,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         std::vector<char> charToChange = js.at("charToChange").get<std::vector<char>>();
         std::vector<std::vector<int>> crdtToChange = js.at("crdtToChange").get<std::vector<std::vector<int>>>();
 
-        json j = json{{"response",         "styleChanged"},
+        json j = json{{"response",         "styleChanged_res"},
                       {"usernameToChange", usernameToChange},
                       {"charToChange",     charToChange},
                       {"crdtToChange",     crdtToChange}
@@ -746,7 +746,9 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         if (js.contains("color"))
             j["color"] = js.at("color").get<std::string>();
         if (js.contains("fontFamily"))
-            j["fontFamily"] = js.at("fontFalimy").get<std::string>();
+            j["fontFamily"] = js.at("fontFamily").get<std::string>();
+        if (js.contains("fontSize"))
+            j["fontSize"] = js.at("fontSize").get<int>();
 
         //TODO: aggiornare sul server
         //TO DO: devo scorrere il mio vettore e trovarci quei caratteri e settargli in get style, quel setfontFamily
@@ -772,10 +774,11 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         bool bold = js.at("bold").get<bool>();
         bool italic = js.at("italic").get<bool>();
         bool underlined = js.at("underlined").get<bool>();
+        std::string color = js.at("color").get<std::string>();
         //TO DO: non dovrebbe esserci solo un elmento?
         for (int i = 0; i < usernameToInsert.size(); i++) {
             //ricreo il simbolo
-            Style style = {bold, underlined, italic, fontFamily, fontSize};
+            Style style = {bold, underlined, italic, fontFamily, fontSize, color};
             //Symbol symbolToInsert(charToInsert[i], usernameToInsert[i], crdtToInsert[i]);
             Symbol symbolToInsert(charToInsert[i], usernameToInsert[i], crdtToInsert[i], style);
             int index = Server::getInstance().generateIndexCRDT(symbolToInsert, shared_from_this()->getCurrentFile(), 0,
@@ -785,15 +788,16 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false);
         }
 
-        json j = json{{"response",         "insertAndStyle_res"},
+        json j = json{{"response", "insertAndStyle_res"},
                       {"usernameToInsert", usernameToInsert},
-                      {"charToInsert",     charToInsert},
-                      {"crdtToInsert",     crdtToInsert},
-                      {"bold",             bold},
-                      {"italic",           italic},
-                      {"underlined",       underlined},
-                      {"fontFamily",       fontFamily},
-                      {"fontSize",         fontSize}};
+                      {"charToInsert", charToInsert},
+                      {"crdtToInsert", crdtToInsert},
+                      {"bold", bold},
+                      {"italic", italic},
+                      {"underlined", underlined},
+                      {"color", color},
+                      {"fontFamily", fontFamily},
+                      {"fontSize", fontSize}};
         sendAllOtherClientsOnFile(j.dump());
         return j.dump();
     } else {

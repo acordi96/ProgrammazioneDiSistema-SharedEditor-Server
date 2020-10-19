@@ -4,14 +4,9 @@
 
 #include "Headers/Style.h"
 
-Style::Style() : bold(false), underlined(false), italic(false), fontFamily(DEFAULT_FONT_FAMILY),
-                 fontSize(DEFAULT_FONT_SIZE), color(DEFAULT_COLOR) {}
+Style::Style() : bold(false), underlined(false), italic(false), fontFamily(DEFAULT_FONT_FAMILY), fontSize(DEFAULT_FONT_SIZE),color(DEFAULT_COLOR) {}
 
-Style::Style(bool bold, bool underlined, bool italic, std::string fontFamily, int fontSize) : bold(bold),
-                                                                                              underlined(underlined),
-                                                                                              italic(italic),
-                                                                                              fontFamily(fontFamily),
-                                                                                              fontSize(fontSize) {}
+Style::Style(bool bold, bool underlined, bool italic, std::string fontFamily, int fontSize, std::string cl) : bold(bold), underlined(underlined), italic(italic), fontFamily(fontFamily), fontSize(fontSize), color(cl){}
 
 bool Style::isBold() const {
     return bold;
@@ -19,6 +14,7 @@ bool Style::isBold() const {
 
 void Style::setBold(bool bold) {
     Style::bold = bold;
+
 }
 
 bool Style::isUnderlined() const {
@@ -60,6 +56,3 @@ const std::string &Style::getColor() const {
 void Style::setColor(const std::string &color) {
     Style::color = color;
 }
-
-
-
