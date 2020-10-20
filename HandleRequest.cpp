@@ -12,7 +12,7 @@
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "InfiniteRecursion"
 
-#define maxBufferSymbol 100 //numero massimo di symbols mandati contemporaneamente
+#define maxBufferSymbol 75 //numero massimo di symbols mandati contemporaneamente
 
 HandleRequest::HandleRequest(tcp::socket socket) : socket(std::move(socket)) {}
 
@@ -62,9 +62,10 @@ void HandleRequest::do_read_body() {
                                         sendAtClient(json{{"response", "json_parse_error"}}.dump());
                                         do_read_header();
                                     }
-                                    std::string requestType = messageFromClient.at("operation").get<std::string>();
+                                    std::string requestType;
                                     std::string response;
                                     try {
+                                        requestType = messageFromClient.at("operation").get<std::string>();
                                         response = handleRequestType(messageFromClient, requestType);
                                     } catch (...) {
                                         std::cout << "handleRequest ERROR: " << errno << std::endl;
@@ -885,7 +886,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
     } else if (type_request == "styleChanged") {
         //prendo il vettore di symbol
         std::vector<std::string> usernameToChange = js.at("usernameToChange").get<std::vector<std::string>>();
-        std::vector<char> charToChange = js.at("charToChange").get<std::vector<char>>();
+        std::vector<wchar_t> charToChange = js.at("charToChange").get<std::vector<wchar_t>>();
         std::vector<std::vector<int>> crdtToChange = js.at("crdtToChange").get<std::vector<std::vector<int>>>();
 
         json j = json{{"response",         "styleChanged_res"},
@@ -915,7 +916,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
     } else if (type_request == "insertAndStyle") {
         //prendo il vettore di symbol
         std::vector<std::string> usernameToInsert = js.at("usernameToInsert").get<std::vector<std::string>>();
-        std::vector<char> charToInsert = js.at("charToInsert").get<std::vector<char>>();
+        std::vector<wchar_t> charToInsert = js.at("charToInsert").get<std::vector<wchar_t>>();
         std::vector<std::vector<int>> crdtToInsert = js.at("crdtToInsert").get<std::vector<std::vector<int>>>();
         std::string fontFamily = js.at("fontFamily").get<std::string>();
         int fontSize = js.at("size").get<int>();
