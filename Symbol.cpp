@@ -8,7 +8,7 @@
 
 Symbol::Symbol(wchar_t car, std::string usr, std::vector<int> pos) : character(car), username(std::move(usr)),
                                                                   posizione(std::move(pos)) {
-
+    this->symbolStyle = Style();
 }
 
 Symbol::Symbol(wchar_t car, std::string usr, std::vector<int> pos, Style style) : character(car), username(std::move(usr)),

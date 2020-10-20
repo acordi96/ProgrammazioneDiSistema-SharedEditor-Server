@@ -11,6 +11,7 @@
 #include <deque>
 #include <queue>
 #include "Participant.h"
+#include "../Libs/json.hpp"
 #include <map>
 
 typedef std::deque<Message> message_queue;
@@ -75,6 +76,8 @@ public:
     unsigned int getOutputcount();
 
     void printCRDT(const std::string &filename);
+
+    void changeStyle(Symbol symbol, nlohmann::json j, const std::string& filename);
 
 private:
     Server() = default;

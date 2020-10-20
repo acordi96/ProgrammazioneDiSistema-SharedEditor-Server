@@ -12,7 +12,7 @@
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "InfiniteRecursion"
 
-#define maxBufferSymbol 150 //numero massimo di symbols mandati contemporaneamente
+#define maxBufferSymbol 100 //numero massimo di symbols mandati contemporaneamente
 
 HandleRequest::HandleRequest(tcp::socket socket) : socket(std::move(socket)) {}
 
@@ -491,11 +491,23 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 std::vector<wchar_t> charToInsert;
                 std::vector<std::vector<int>> crdtToInsert;
                 std::map<std::string, int> usernameToId;
+                std::vector<int> styleBold;
+                std::vector<int> styleItalic;
+                std::vector<int> styleUnderlined;
+                std::vector<std::string> styleColor;
+                std::vector<std::string> styleFontFamily;
+                std::vector<int> styleSize;
                 int countId = 0;
                 while ((i + 1) * maxBufferSymbol <= dim) {
                     usernameToInsert.clear();
                     charToInsert.clear();
                     crdtToInsert.clear();
+                    styleBold.clear();
+                    styleItalic.clear();
+                    styleUnderlined.clear();
+                    styleSize.clear();
+                    styleFontFamily.clear();
+                    styleColor.clear();
                     for (int k = 0; k < maxBufferSymbol; k++) {
                         if (usernameToId.find(symbols[(i * maxBufferSymbol) + k].getUsername()) == usernameToId.end())
                             usernameToId.insert(
@@ -506,6 +518,14 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
                         charToInsert.push_back(symbols[(i * maxBufferSymbol) + k].getCharacter());
                         crdtToInsert.push_back(symbols[(i * maxBufferSymbol) + k].getPosizione());
+
+                        styleBold.push_back(symbols[(i * maxBufferSymbol) + k].getSymbolStyle().isBold() ? 1 : 0);
+                        styleItalic.push_back(symbols[(i * maxBufferSymbol) + k].getSymbolStyle().isItalic() ? 1 : 0);
+                        styleUnderlined.push_back(
+                                symbols[(i * maxBufferSymbol) + k].getSymbolStyle().isUnderlined() ? 1 : 0);
+                        styleColor.push_back(symbols[(i * maxBufferSymbol) + k].getSymbolStyle().getColor());
+                        styleFontFamily.push_back(symbols[(i * maxBufferSymbol) + k].getSymbolStyle().getFontFamily());
+                        styleSize.push_back(symbols[(i * maxBufferSymbol) + k].getSymbolStyle().getFontSize());
                     }
                     std::vector<std::string> idToUsername;
                     while (idToUsername.size() != usernameToId.size())
@@ -517,13 +537,25 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                                   {"usernameToInsert", usernameToInsert},
                                   {"charToInsert",     charToInsert},
                                   {"crdtToInsert",     crdtToInsert},
-                                  {"usernameToId",     idToUsername}};
+                                  {"usernameToId",     idToUsername},
+                                  {"bold",             styleBold},
+                                  {"italic",           styleItalic},
+                                  {"underlined",       styleUnderlined},
+                                  {"color",            styleColor},
+                                  {"fontFamily",       styleFontFamily},
+                                  {"size",             styleSize}};
                     sendAtClient(j.dump());
                     i++;
                 }
                 usernameToInsert.clear();
                 charToInsert.clear();
                 crdtToInsert.clear();
+                styleBold.clear();
+                styleItalic.clear();
+                styleUnderlined.clear();
+                styleSize.clear();
+                styleFontFamily.clear();
+                styleColor.clear();
                 for (int k = 0; k < (dim % maxBufferSymbol); k++) {
                     if (usernameToId.find(symbols[(of * maxBufferSymbol) + k].getUsername()) == usernameToId.end())
                         usernameToId.insert(
@@ -532,6 +564,14 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
                     charToInsert.push_back(symbols[(of * maxBufferSymbol) + k].getCharacter());
                     crdtToInsert.push_back(symbols[(of * maxBufferSymbol) + k].getPosizione());
+
+                    styleBold.push_back(symbols[(of * maxBufferSymbol) + k].getSymbolStyle().isBold() ? 1 : 0);
+                    styleItalic.push_back(symbols[(of * maxBufferSymbol) + k].getSymbolStyle().isItalic() ? 1 : 0);
+                    styleUnderlined.push_back(
+                            symbols[(of * maxBufferSymbol) + k].getSymbolStyle().isUnderlined() ? 1 : 0);
+                    styleColor.push_back(symbols[(of * maxBufferSymbol) + k].getSymbolStyle().getColor());
+                    styleFontFamily.push_back(symbols[(of * maxBufferSymbol) + k].getSymbolStyle().getFontFamily());
+                    styleSize.push_back(symbols[(of * maxBufferSymbol) + k].getSymbolStyle().getFontSize());
                 }
                 std::vector<std::string> idToUsername;
                 while (idToUsername.size() != usernameToId.size())
@@ -543,7 +583,13 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                               {"charToInsert",     charToInsert},
                               {"crdtToInsert",     crdtToInsert},
                               {"usernameToId",     idToUsername},
-                              {"endOpenFile",      "finished"}};
+                              {"endOpenFile",      "finished"},
+                              {"bold",             styleBold},
+                              {"italic",           styleItalic},
+                              {"underlined",       styleUnderlined},
+                              {"color",            styleColor},
+                              {"fontFamily",       styleFontFamily},
+                              {"size",             styleSize}};
                 sendAtClient(j.dump());
 
                 std::cout << SocketManager::output() << "CLIENT " << this->getId() << " ("
@@ -557,7 +603,13 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 std::vector<int> usernameToInsert;
                 std::vector<wchar_t> charToInsert;
                 std::vector<std::vector<int>> crdtToInsert;
-                json jline;
+                std::vector<int> styleBold;
+                std::vector<int> styleItalic;
+                std::vector<int> styleUnderlined;
+                std::vector<std::string> styleColor;
+                std::vector<std::string> styleFontFamily;
+                std::vector<int> styleSize;
+                json jline, jline2;
                 std::string line;
                 int dim = 0;
                 int symbolCount = 0;
@@ -571,25 +623,56 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
 
                     charToInsert.push_back(jline.at("character").get<wchar_t>());
                     crdtToInsert.push_back(jline.at("posizione").get<std::vector<int>>());
+
+                    std::getline(file, line);
+                    jline2 = json::parse(line);
+
+                    styleBold.push_back(jline2.at("bold").get<int>());
+                    styleItalic.push_back(jline2.at("italic").get<int>());
+                    styleUnderlined.push_back(jline2.at("underlined").get<int>());
+                    styleSize.push_back(jline2.at("size").get<int>());
+                    styleFontFamily.push_back(jline2.at("fontFamily").get<std::string>());
+                    styleColor.push_back(jline2.at("color").get<std::string>());
+
+                    Style style(jline2.at("bold").get<int>() == 1,
+                                jline2.at("underlined").get<int>() == 1,
+                                jline2.at("italic").get<int>() == 1,
+                                jline2.at("fontFamily").get<std::string>(),
+                                jline2.at("size").get<int>(),
+                                jline2.at("color").get<std::string>());
+
                     Server::getInstance().insertSymbolIndex(
                             Symbol(jline.at("character").get<wchar_t>(), jline.at("username").get<std::string>(),
-                                   jline.at("posizione").get<std::vector<int>>()), dim++, filename);
+                                   jline.at("posizione").get<std::vector<int>>(), style), dim++, filename);
                     if (symbolCount++ == maxBufferSymbol) {
                         std::vector<std::string> idToUsername;
                         while (idToUsername.size() != usernameToId.size())
                             for (auto &pair : usernameToId)
                                 if (pair.second == idToUsername.size())
                                     idToUsername.push_back(pair.first);
+
                         json j = json{{"response",         "open_file"},
                                       {"usernameToInsert", usernameToInsert},
                                       {"charToInsert",     charToInsert},
                                       {"crdtToInsert",     crdtToInsert},
-                                      {"usernameToId",     idToUsername}};
+                                      {"usernameToId",     idToUsername},
+                                      {"bold",             styleBold},
+                                      {"italic",           styleItalic},
+                                      {"underlined",       styleUnderlined},
+                                      {"color",            styleColor},
+                                      {"fontFamily",       styleFontFamily},
+                                      {"size",             styleSize}};
                         sendAtClient(j.dump());
                         symbolCount = 0;
                         usernameToInsert.clear();
                         charToInsert.clear();
                         crdtToInsert.clear();
+                        styleBold.clear();
+                        styleItalic.clear();
+                        styleUnderlined.clear();
+                        styleSize.clear();
+                        styleFontFamily.clear();
+                        styleColor.clear();
                     }
                 }
                 std::vector<std::string> idToUsername;
@@ -602,7 +685,13 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                               {"charToInsert",     charToInsert},
                               {"crdtToInsert",     crdtToInsert},
                               {"usernameToId",     idToUsername},
-                              {"endOpenFile",      "finished"}};
+                              {"endOpenFile",      "finished"},
+                              {"bold",             styleBold},
+                              {"italic",           styleItalic},
+                              {"underlined",       styleUnderlined},
+                              {"color",            styleColor},
+                              {"fontFamily",       styleFontFamily},
+                              {"size",             styleSize}};
                 sendAtClient(j.dump());
 
                 std::cout << SocketManager::output() << "CLIENT " << this->getId() << " ("
@@ -814,20 +903,12 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             j["color"] = js.at("color").get<std::string>();
         if (js.contains("fontFamily"))
             j["fontFamily"] = js.at("fontFamily").get<std::string>();
-        if (js.contains("fontSize"))
-            j["fontSize"] = js.at("fontSize").get<int>();
+        if (js.contains("size"))
+            j["size"] = js.at("size").get<int>();
 
-        //TODO: aggiornare sul server
-        //TO DO: devo scorrere il mio vettore e trovarci quei caratteri e settargli in get style, quel setfontFamily
-        int startIndex = crdtToChange.front().front(); //posizione 1
-        int endIndex = crdtToChange.back().front(); //posizione finale
-
-
-        //TO DO:aggiornarli sul server
-        for (int i = startIndex; i <= endIndex; i++) {
-            //symbols[i].setSymbolStyle(style);
-        }
-
+        for (int i = 0; i < usernameToChange.size(); i++)
+            Server::getInstance().changeStyle(Symbol(charToChange[i], usernameToChange[i], crdtToChange[i]), j,
+                                              this->getCurrentFile());
 
         sendAllOtherClientsOnFile(j.dump());
         return j.dump();
@@ -837,7 +918,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         std::vector<char> charToInsert = js.at("charToInsert").get<std::vector<char>>();
         std::vector<std::vector<int>> crdtToInsert = js.at("crdtToInsert").get<std::vector<std::vector<int>>>();
         std::string fontFamily = js.at("fontFamily").get<std::string>();
-        int fontSize = js.at("fontSize").get<int>();
+        int fontSize = js.at("size").get<int>();
         bool bold = js.at("bold").get<bool>();
         bool italic = js.at("italic").get<bool>();
         bool underlined = js.at("underlined").get<bool>();
@@ -855,16 +936,16 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
             Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false);
         }
 
-        json j = json{{"response", "insertAndStyle_res"},
+        json j = json{{"response",         "insertAndStyle_res"},
                       {"usernameToInsert", usernameToInsert},
-                      {"charToInsert", charToInsert},
-                      {"crdtToInsert", crdtToInsert},
-                      {"bold", bold},
-                      {"italic", italic},
-                      {"underlined", underlined},
-                      {"color", color},
-                      {"fontFamily", fontFamily},
-                      {"fontSize", fontSize}};
+                      {"charToInsert",     charToInsert},
+                      {"crdtToInsert",     crdtToInsert},
+                      {"bold",             bold},
+                      {"italic",           italic},
+                      {"underlined",       underlined},
+                      {"color",            color},
+                      {"fontFamily",       fontFamily},
+                      {"size",             fontSize}};
         sendAllOtherClientsOnFile(j.dump());
         return j.dump();
     } else {

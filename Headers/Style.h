@@ -4,8 +4,8 @@
 
 #ifndef SERVERPDS_STYLE_H
 #define SERVERPDS_STYLE_H
-#define DEFAULT_FONT_FAMILY "Times New Roman"
-#define DEFAULT_COLOR "#00ffffff"
+#define DEFAULT_FONT_FAMILY "Helvetica"
+#define DEFAULT_COLOR "#000000"
 #ifdef __linux__
     #define DEFAULT_FONT_SIZE 11
 #else //winzoz

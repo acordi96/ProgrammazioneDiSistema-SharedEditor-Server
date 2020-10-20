@@ -7,7 +7,7 @@
 #include "Headers/Server.h"
 #include "Headers/SocketManager.h"
 
-#define nModsBeforeWrite 150 //numero di modifiche prima di modificare il file (>0)
+#define nModsBeforeWrite 1 //numero di modifiche prima di modificare il file (>0)
 
 Server::~Server() {
     std::vector<std::string> openFiles;
@@ -252,6 +252,16 @@ void Server::modFile(const std::string &filename, bool force) {
                 };
             }
             std::string linej = j.dump();
+            j = {
+                    {"bold",       this->symbolsPerFile.at(filename)[iter].symbolStyle.isBold()},
+                    {"italic",     this->symbolsPerFile.at(filename)[iter].symbolStyle.isItalic()},
+                    {"underlined", this->symbolsPerFile.at(filename)[iter].symbolStyle.isUnderlined()},
+                    {"color",      this->symbolsPerFile.at(filename)[iter].symbolStyle.getColor()},
+                    {"size",       this->symbolsPerFile.at(filename)[iter].symbolStyle.getFontSize()},
+                    {"fontFamily", this->symbolsPerFile.at(filename)[iter].symbolStyle.getFontFamily()}
+            };
+            linej += "\n";
+            linej += j.dump();
             if (iter != this->symbolsPerFile.at(filename).size() - 1)
                 linej += "\n";
             const char *line = linej.c_str();
@@ -404,4 +414,26 @@ std::vector<int> Server::generatePosBetween(std::vector<int> pos1, std::vector<i
         }
     }
     return std::vector<int>();
+}
+
+void Server::changeStyle(Symbol symbol, nlohmann::json js, const std::string &filename) {
+    for (auto &iterSymbol : this->symbolsPerFile.at(filename)) {
+        if (iterSymbol.getUsername() == symbol.getUsername() &&
+            iterSymbol.getCharacter() == symbol.getCharacter() &&
+            iterSymbol.getPosizione() == symbol.getPosizione()) {
+            if (js.contains("bold"))
+                iterSymbol.symbolStyle.setBold(js.at("bold").get<bool>());
+            if (js.contains("italic"))
+                iterSymbol.symbolStyle.setItalic(js.at("italic").get<bool>());
+            if (js.contains("underlined"))
+                iterSymbol.symbolStyle.setUnderlined(js.at("underlined").get<bool>());
+            if (js.contains("fontFamily"))
+                iterSymbol.symbolStyle.setFontFamily(js.at("fontFamily").get<std::string>());
+            if (js.contains("size"))
+                iterSymbol.symbolStyle.setFontSize(js.at("size").get<int>());
+            if (js.contains("color"))
+                iterSymbol.symbolStyle.setColor(js.at("color").get<std::string>());
+            return;
+        }
+    }
 }
