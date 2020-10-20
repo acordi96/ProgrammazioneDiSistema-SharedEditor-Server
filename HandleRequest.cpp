@@ -12,7 +12,7 @@
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "InfiniteRecursion"
 
-#define maxBufferSymbol 4 //numero massimo di symbols mandati contemporaneamente
+#define maxBufferSymbol 150 //numero massimo di symbols mandati contemporaneamente
 
 HandleRequest::HandleRequest(tcp::socket socket) : socket(std::move(socket)) {}
 
@@ -363,8 +363,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                                                                 -1, -1);
             //aggiungo al crdt
             Server::getInstance().insertSymbolIndex(symbolToInsert, index, shared_from_this()->getCurrentFile());
-            Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false);
         }
+        Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false, usernameToInsert.size());
 
         json j = json{{"response",         "insert_res"},
                       {"usernameToInsert", usernameToInsert},
@@ -383,10 +383,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         //cancello dal crdt symbols compresi tra i due e prendo indici
 
         Server::getInstance().eraseSymbolCRDT(symbolsToErase, shared_from_this()->getCurrentFile());
-
-        //salvataggio su file
-        for (int i = 0; i < symbolsToErase.size(); i++)
-            Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false);
+        Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false, symbolsToErase.size());
 
         json j = json{{"response",        "remove_res"},
                       {"usernameToErase", usernameToErase},
@@ -616,17 +613,17 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                         allUnderlinedStandard = false;
                     styleColor.push_back(
                             symbols[(of * maxBufferSymbol) + k].getSymbolStyle().getColor() != DEFAULT_COLOR ? symbols[
-                                    (i * maxBufferSymbol) + k].getSymbolStyle().getColor() : "0");
+                                    (of * maxBufferSymbol) + k].getSymbolStyle().getColor() : "0");
                     if (symbols[(of * maxBufferSymbol) + k].getSymbolStyle().getColor() != DEFAULT_COLOR)
                         allColorStandard = false;
                     styleFontFamily.push_back(
                             symbols[(of * maxBufferSymbol) + k].getSymbolStyle().getFontFamily() != DEFAULT_FONT_FAMILY
-                            ? symbols[(i * maxBufferSymbol) + k].getSymbolStyle().getFontFamily() : "0");
+                            ? symbols[(of * maxBufferSymbol) + k].getSymbolStyle().getFontFamily() : "0");
                     if (symbols[(of * maxBufferSymbol) + k].getSymbolStyle().getFontFamily() != DEFAULT_FONT_FAMILY)
                         allFontFamilyStandard = false;
                     styleSize.push_back(
                             symbols[(of * maxBufferSymbol) + k].getSymbolStyle().getFontSize() != DEFAULT_FONT_SIZE
-                            ? symbols[(i * maxBufferSymbol) + k].getSymbolStyle().getFontSize() : 0);
+                            ? symbols[(of * maxBufferSymbol) + k].getSymbolStyle().getFontSize() : 0);
                     if (symbols[(of * maxBufferSymbol) + k].getSymbolStyle().getFontSize() != DEFAULT_FONT_SIZE)
                         allSizeStandard = false;
                 }
@@ -1022,8 +1019,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                                                                 -1, -1);
             //aggiungo al crdt
             Server::getInstance().insertSymbolIndex(symbolToInsert, index, shared_from_this()->getCurrentFile());
-            Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false);
         }
+        Server::getInstance().modFile(shared_from_this()->getCurrentFile(), false, usernameToInsert.size());
 
         json j = json{{"response",         "insertAndStyle_res"},
                       {"usernameToInsert", usernameToInsert},

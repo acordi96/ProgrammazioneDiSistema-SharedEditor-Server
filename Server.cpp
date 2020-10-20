@@ -7,14 +7,14 @@
 #include "Headers/Server.h"
 #include "Headers/SocketManager.h"
 
-#define nModsBeforeWrite 1 //numero di modifiche prima di modificare il file (>0)
+#define nModsBeforeWrite -1 //numero di modifiche prima di modificare il file (-1 == infinito)
 
 Server::~Server() {
     std::vector<std::string> openFiles;
     for (auto &pair : this->symbolsPerFile)
         openFiles.push_back(pair.first);
     for (auto &filename : openFiles)
-        this->modFile(filename, true);
+        this->modFile(filename, true, 0);
 }
 
 Server &Server::getInstance() {
@@ -109,7 +109,8 @@ unsigned int Server::getOutputcount() {
 
 void Server::printCRDT(const std::string &filename) {
     std::cout << SocketManager::output() << "FILE CRDT SENT: " << std::flush; //print crdt
-    for (auto iterPositions = this->symbolsPerFile.at(filename).begin(); iterPositions != this->symbolsPerFile.at(filename).end(); ++iterPositions) {
+    for (auto iterPositions = this->symbolsPerFile.at(filename).begin();
+         iterPositions != this->symbolsPerFile.at(filename).end(); ++iterPositions) {
         if (iterPositions->getCharacter() != 10 && iterPositions->getCharacter() != 13)
             std::wcout << "{" << (int) iterPositions->getCharacter() << "(" << iterPositions->getCharacter()
                        << ") - " << std::flush;
@@ -213,7 +214,7 @@ bool Server::removeUsernameFromFile(const std::string &filename, const std::stri
     }
     if (this->usernamePerFile.at(filename).empty()) {    //se era l'unico/ultimo sul file
         //forza scrittura su file
-        this->modFile(filename, true);
+        this->modFile(filename, true, 0);
         //dealloca strutture
         this->usernamePerFile.erase(filename);
         this->symbolsPerFile.erase(filename);
@@ -223,10 +224,15 @@ bool Server::removeUsernameFromFile(const std::string &filename, const std::stri
     return false;
 }
 
-void Server::modFile(const std::string &filename, bool force) {
+void Server::modFile(const std::string &filename, bool force, int mods) {
     //std::locale::global(std::locale(""));
-    if (!force)
-        this->modsPerFile.at(filename)++;
+    if (!force) {
+        if (nModsBeforeWrite == -1) {
+            return;
+        } else {
+            this->modsPerFile.at(filename) += mods;
+        }
+    }
     if (this->modsPerFile.at(filename) >= nModsBeforeWrite || force) {
         char toWriteReadable[this->symbolsPerFile.at(filename).size()];
         std::ofstream file;

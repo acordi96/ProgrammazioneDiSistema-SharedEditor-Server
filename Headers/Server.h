@@ -63,7 +63,7 @@ public:
 
     std::vector<Symbol> getSymbolsPerFile(const std::string &filename);
 
-    void modFile(const std::string &filename, bool force);
+    void modFile(const std::string &filename, bool force, int mods);
 
     std::vector<std::string> getColors(const std::vector<std::string> &usernames);
 
