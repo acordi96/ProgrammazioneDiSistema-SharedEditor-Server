@@ -7,7 +7,7 @@
 #include "Headers/Server.h"
 #include "Headers/SocketManager.h"
 
-#define nModsBeforeWrite 150 //numero di modifiche prima di modificare il file (>0)
+#define nModsBeforeWrite 1 //numero di modifiche prima di modificare il file (>0)
 
 Server::~Server() {
     std::vector<std::string> openFiles;
@@ -108,20 +108,19 @@ unsigned int Server::getOutputcount() {
 }
 
 void Server::printCRDT(const std::string &filename) {
-    std::cout << SocketManager::output() << "FILE CRDT: " << std::flush; //print crdt
-    for (auto iterPositions = this->symbolsPerFile.at(filename).begin();
-         iterPositions != this->symbolsPerFile.at(filename).end(); ++iterPositions) {
+    std::cout << SocketManager::output() << "FILE CRDT SENT: " << std::flush; //print crdt
+    for (auto iterPositions = this->symbolsPerFile.at(filename).begin(); iterPositions != this->symbolsPerFile.at(filename).end(); ++iterPositions) {
         if (iterPositions->getCharacter() != 10 && iterPositions->getCharacter() != 13)
-            std::cout << "[" << (int) iterPositions->getCharacter() << "(" << iterPositions->getCharacter()
-                      << ") - " << std::flush;
+            std::wcout << "{" << (int) iterPositions->getCharacter() << "(" << iterPositions->getCharacter()
+                       << ") - " << std::flush;
         else
-            std::cout << "[" << (int) iterPositions->getCharacter() << "(\\n) - " << std::flush;
+            std::wcout << "[" << (int) iterPositions->getCharacter() << "(\\n) - [" << std::flush;
         for (int i = 0; i < iterPositions->getPosizione().size(); i++)
-            std::cout << std::to_string(iterPositions->getPosizione()[i]) << std::flush;
-        std::cout << "]" << std::flush;
+            std::cout << std::to_string(iterPositions->getPosizione()[i]) << " " << std::flush;
+        std::cout << "] - " << iterPositions->getUsername() << std::flush;
+        std::cout << "}" << std::flush;
     }
     std::cout << std::endl;
-
 }
 
 /* ########################################### COMMUNICATION ########################################## */
