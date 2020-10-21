@@ -12,7 +12,8 @@
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "InfiniteRecursion"
 
-#define maxBufferSymbol 4 //numero massimo di symbols mandati contemporaneamente
+#define maxBufferSymbol 150 //numero massimo di symbols mandati contemporaneamente
+#define debugOutput false
 
 HandleRequest::HandleRequest(tcp::socket socket) : socket(std::move(socket)) {}
 
@@ -46,12 +47,14 @@ void HandleRequest::do_read_body() {
     boost::asio::async_read(socket, boost::asio::buffer(read_msg_.body(), read_msg_.body_length()),
                             [this, self](boost::system::error_code ec, std::size_t /*length*/) {
                                 if (!ec) {
-                                    std::cout << SocketManager::output()
-                                              << "REQUEST FROM CLIENT " << this->getId();
-                                    if (shared_from_this()->getUsername() != "")
-                                        std::cout << " ("
-                                                  << shared_from_this()->getUsername() << ")";
-                                    std::cout << ": " << read_msg_.body() << std::endl;
+                                    if (debugOutput) {
+                                        std::cout << SocketManager::output()
+                                                  << "REQUEST FROM CLIENT " << this->getId();
+                                        if (shared_from_this()->getUsername() != "")
+                                            std::cout << " ("
+                                                      << shared_from_this()->getUsername() << ")";
+                                        std::cout << ": " << read_msg_.body() << std::endl;
+                                    }
                                     json messageFromClient;
                                     try {
                                         std::string message = read_msg_.body();
@@ -91,11 +94,13 @@ void HandleRequest::sendAtClient(const std::string &j_string) {
     std::memcpy(msg.body(), j_string.data(), msg.body_length());
     msg.body()[msg.body_length()] = '\0';
     msg.encode_header();
-    std::cout << SocketManager::output() << "RESPONSE TO CLIENT " << this->getId();
-    if (shared_from_this()->getUsername() != "")
-        std::cout << " ("
-                  << shared_from_this()->getUsername() << ")";
-    std::cout << ": " << msg.body() << std::endl;
+    if (debugOutput) {
+        std::cout << SocketManager::output() << "RESPONSE TO CLIENT " << this->getId();
+        if (shared_from_this()->getUsername() != "")
+            std::cout << " ("
+                      << shared_from_this()->getUsername() << ")";
+        std::cout << ": " << msg.body() << std::endl;
+    }
     shared_from_this()->deliver(msg);
 
 }
@@ -107,10 +112,11 @@ void HandleRequest::sendAllOtherClientsOnFile(const std::string &response) {
     std::memcpy(msg.body(), response.data(), msg.body_length());
     msg.body()[msg.body_length()] = '\0';
     msg.encode_header();
-    std::cout << SocketManager::output() << "RESPONSE TO ALL OTHER CLIENTS ON FILE "
-              << this->getCurrentFile() << ": "
-              << msg.body()
-              << std::endl;
+    if (debugOutput)
+        std::cout << SocketManager::output() << "RESPONSE TO ALL OTHER CLIENTS ON FILE "
+                  << this->getCurrentFile() << ": "
+                  << msg.body()
+                  << std::endl;
     Server::getInstance().deliverToAllOtherOnFile(msg, shared_from_this());
 }
 
@@ -121,10 +127,11 @@ void HandleRequest::sendAllClientsOnFile(const std::string &response) {
     std::memcpy(msg.body(), response.data(), msg.body_length());
     msg.body()[msg.body_length()] = '\0';
     msg.encode_header();
-    std::cout << SocketManager::output() << "RESPONSE TO ALL CLIENTS ON FILE "
-              << this->getCurrentFile() << ": "
-              << msg.body()
-              << std::endl;
+    if (debugOutput)
+        std::cout << SocketManager::output() << "RESPONSE TO ALL CLIENTS ON FILE "
+                  << this->getCurrentFile() << ": "
+                  << msg.body()
+                  << std::endl;
     Server::getInstance().deliverToAllOnFile(msg, shared_from_this());
 }
 
@@ -537,7 +544,7 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                             ? symbols[iter].getSymbolStyle().getFontSize() : 0);
                     if (symbols[iter].getSymbolStyle().getFontSize() != DEFAULT_FONT_SIZE)
                         allSizeStandard = false;
-                    if(++count == maxBufferSymbol) {
+                    if (++count == maxBufferSymbol) {
                         std::vector<std::string> idToUsername;
                         while (idToUsername.size() != usernameToId.size())
                             for (auto &pair : usernameToId)
@@ -594,156 +601,6 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 allSizeStandard ? j["sizeDefault"] = "" : j["size"] = styleSize;
 
                 sendAtClient(j.dump());
-                /*int of = dim / maxBufferSymbol;
-                int i = 0;
-                while ((i + 1) * maxBufferSymbol <= dim) {
-                    usernameToInsert.clear();
-                    charToInsert.clear();
-                    crdtToInsert.clear();
-                    styleBold.clear();
-                    styleItalic.clear();
-                    styleUnderlined.clear();
-                    styleSize.clear();
-                    styleFontFamily.clear();
-                    styleColor.clear();
-                    allBoldStandard = true;
-                    allItalicStandard = true;
-                    allUnderlinedStandard = true;
-                    allFontFamilyStandard = true;
-                    allColorStandard = true;
-                    allSizeStandard = true;
-                    for (int k = 0; k < maxBufferSymbol; k++) {
-                        if (usernameToId.find(symbols[(i * maxBufferSymbol) + k].getUsername()) == usernameToId.end())
-                            usernameToId.insert(
-                                    {symbols[(i * maxBufferSymbol) + k].getUsername(), countId++});
-
-                        usernameToInsert.push_back(
-                                usernameToId.at(symbols[(i * maxBufferSymbol) + k].getUsername()));
-
-                        charToInsert.push_back(symbols[(i * maxBufferSymbol) + k].getCharacter());
-                        crdtToInsert.push_back(symbols[(i * maxBufferSymbol) + k].getPosizione());
-
-                        styleBold.push_back(symbols[(i * maxBufferSymbol) + k].getSymbolStyle().isBold() ? 1 : 0);
-                        if (symbols[(i * maxBufferSymbol) + k].getSymbolStyle().isBold())
-                            allBoldStandard = false;
-                        styleItalic.push_back(symbols[(i * maxBufferSymbol) + k].getSymbolStyle().isItalic() ? 1 : 0);
-                        if (symbols[(i * maxBufferSymbol) + k].getSymbolStyle().isItalic())
-                            allItalicStandard = false;
-                        styleUnderlined.push_back(
-                                symbols[(i * maxBufferSymbol) + k].getSymbolStyle().isUnderlined() ? 1 : 0);
-                        if (symbols[(i * maxBufferSymbol) + k].getSymbolStyle().isUnderlined())
-                            allUnderlinedStandard = false;
-                        styleColor.push_back(
-                                symbols[(i * maxBufferSymbol) + k].getSymbolStyle().getColor() != DEFAULT_COLOR
-                                ? symbols[(i * maxBufferSymbol) + k].getSymbolStyle().getColor() : "0");
-                        if (symbols[(i * maxBufferSymbol) + k].getSymbolStyle().getColor() != DEFAULT_COLOR)
-                            allColorStandard = false;
-                        styleFontFamily.push_back(symbols[(i * maxBufferSymbol) + k].getSymbolStyle().getFontFamily() !=
-                                                  DEFAULT_FONT_FAMILY ? symbols[(i * maxBufferSymbol) +
-                                                                                k].getSymbolStyle().getFontFamily()
-                                                                      : "0");
-                        if (symbols[(i * maxBufferSymbol) + k].getSymbolStyle().getFontFamily() != DEFAULT_FONT_FAMILY)
-                            allFontFamilyStandard = false;
-                        styleSize.push_back(
-                                symbols[(i * maxBufferSymbol) + k].getSymbolStyle().getFontSize() != DEFAULT_FONT_SIZE
-                                ? symbols[(i * maxBufferSymbol) + k].getSymbolStyle().getFontSize() : 0);
-                        if (symbols[(i * maxBufferSymbol) + k].getSymbolStyle().getFontSize() != DEFAULT_FONT_SIZE)
-                            allSizeStandard = false;
-                    }
-                    std::vector<std::string> idToUsername;
-                    while (idToUsername.size() != usernameToId.size())
-                        for (auto &pair : usernameToId)
-                            if (pair.second == idToUsername.size())
-                                idToUsername.push_back(pair.first);
-
-                    json j = json{{"response",         "open_file"},
-                                  {"usernameToInsert", usernameToInsert},
-                                  {"charToInsert",     charToInsert},
-                                  {"crdtToInsert",     crdtToInsert},
-                                  {"usernameToId",     idToUsername},};
-                    allBoldStandard ? j["boldDefault"] = "" : j["bold"] = styleBold;
-                    allItalicStandard ? j["italicDefault"] = "" : j["italic"] = styleItalic;
-                    allUnderlinedStandard ? j["underlinedDefault"] = "" : j["underlined"] = styleUnderlined;
-                    allFontFamilyStandard ? j["fontFamilyDefault"] = "" : j["fontFamily"] = styleFontFamily;
-                    allColorStandard ? j["colorDefault"] = "" : j["color"] = styleColor;
-                    allSizeStandard ? j["sizeDefault"] = "" : j["size"] = styleSize;
-
-                    sendAtClient(j.dump());
-                    i++;
-                }
-                usernameToInsert.clear();
-                charToInsert.clear();
-                crdtToInsert.clear();
-                styleBold.clear();
-                styleItalic.clear();
-                styleUnderlined.clear();
-                styleSize.clear();
-                styleFontFamily.clear();
-                styleColor.clear();
-                allBoldStandard = true;
-                allItalicStandard = true;
-                allUnderlinedStandard = true;
-                allFontFamilyStandard = true;
-                allColorStandard = true;
-                allSizeStandard = true;
-                for (int k = 0; k < (dim % maxBufferSymbol); k++) {
-                    if (usernameToId.find(symbols[(of * maxBufferSymbol) + k].getUsername()) == usernameToId.end())
-                        usernameToId.insert(
-                                {symbols[(of * maxBufferSymbol) + k].getUsername(), countId++});
-                    usernameToInsert.push_back(usernameToId.at(symbols[(of * maxBufferSymbol) + k].getUsername()));
-
-                    charToInsert.push_back(symbols[(of * maxBufferSymbol) + k].getCharacter());
-                    crdtToInsert.push_back(symbols[(of * maxBufferSymbol) + k].getPosizione());
-
-                    styleBold.push_back(symbols[(of * maxBufferSymbol) + k].getSymbolStyle().isBold() ? 1 : 0);
-                    if (symbols[(of * maxBufferSymbol) + k].getSymbolStyle().isBold())
-                        allBoldStandard = false;
-                    styleItalic.push_back(symbols[(of * maxBufferSymbol) + k].getSymbolStyle().isItalic() ? 1 : 0);
-                    if (symbols[(of * maxBufferSymbol) + k].getSymbolStyle().isItalic())
-                        allItalicStandard = false;
-                    styleUnderlined.push_back(
-                            symbols[(of * maxBufferSymbol) + k].getSymbolStyle().isUnderlined() ? 1 : 0);
-                    if (symbols[(of * maxBufferSymbol) + k].getSymbolStyle().isUnderlined())
-                        allUnderlinedStandard = false;
-                    styleColor.push_back(
-                            symbols[(of * maxBufferSymbol) + k].getSymbolStyle().getColor() != DEFAULT_COLOR ? symbols[
-                                    (of * maxBufferSymbol) + k].getSymbolStyle().getColor() : "0");
-                    if (symbols[(of * maxBufferSymbol) + k].getSymbolStyle().getColor() != DEFAULT_COLOR)
-                        allColorStandard = false;
-                    styleFontFamily.push_back(
-                            symbols[(of * maxBufferSymbol) + k].getSymbolStyle().getFontFamily() != DEFAULT_FONT_FAMILY
-                            ? symbols[(of * maxBufferSymbol) + k].getSymbolStyle().getFontFamily() : "0");
-                    if (symbols[(of * maxBufferSymbol) + k].getSymbolStyle().getFontFamily() != DEFAULT_FONT_FAMILY)
-                        allFontFamilyStandard = false;
-                    styleSize.push_back(
-                            symbols[(of * maxBufferSymbol) + k].getSymbolStyle().getFontSize() != DEFAULT_FONT_SIZE
-                            ? symbols[(of * maxBufferSymbol) + k].getSymbolStyle().getFontSize() : 0);
-                    if (symbols[(of * maxBufferSymbol) + k].getSymbolStyle().getFontSize() != DEFAULT_FONT_SIZE)
-                        allSizeStandard = false;
-                }
-                std::vector<std::string> idToUsername;
-                while (idToUsername.size() != usernameToId.size())
-                    for (auto &pair : usernameToId)
-                        if (pair.second == idToUsername.size())
-                            idToUsername.push_back(pair.first);
-                json j = json{{"response",         "open_file"},
-                              {"usernameToInsert", usernameToInsert},
-                              {"charToInsert",     charToInsert},
-                              {"crdtToInsert",     crdtToInsert},
-                              {"usernameToId",     idToUsername},
-                              {"endOpenFile",      ""}};
-                allBoldStandard ? j["boldDefault"] = "" : j["bold"] = styleBold;
-                allItalicStandard ? j["italicDefault"] = "" : j["italic"] = styleItalic;
-                allUnderlinedStandard ? j["underlinedDefault"] = "" : j["underlined"] = styleUnderlined;
-                allFontFamilyStandard ? j["fontFamilyDefault"] = "" : j["fontFamily"] = styleFontFamily;
-                allColorStandard ? j["colorDefault"] = "" : j["color"] = styleColor;
-                allSizeStandard ? j["sizeDefault"] = "" : j["size"] = styleSize;
-
-                sendAtClient(j.dump());*/
-
-                std::cout << SocketManager::output() << "CLIENT " << this->getId() << " ("
-                          << this->getUsername() << ") OPEN (NOT NEW) FILE (" << dim << " char): " << filename
-                          << std::endl;
 
             } else { //prima volta che il file viene aperto (lettura da file)
                 Server::getInstance().openFile(filename, shared_from_this()->getUsername());
@@ -903,6 +760,12 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                           {"filename", resp.second}
             };
             sendAtClient(j.dump());
+
+            std::cout << SocketManager::output() << "CLIENT " << this->getId();
+            if (shared_from_this()->getUsername() != "")
+                std::cout << " ("
+                          << shared_from_this()->getUsername() << ")";
+            std::cout << " ACCEPTED INVITATION, OWNER: " << resp.first << " FILE: " << resp.second << std::endl;
             return j.dump();
         } else {
             json j = json{{"response", "invitation_error"}};
@@ -983,6 +846,13 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                           {"owner",    shared_from_this()->getUsername()}};
             for (auto &usernameInvited : invited)
                 sendAtClientUsername(j.dump(), usernameInvited);
+
+            std::cout << SocketManager::output() << "CLIENT " << this->getId();
+            if (shared_from_this()->getUsername() != "")
+                std::cout << " ("
+                          << shared_from_this()->getUsername() << ")";
+            std::cout << " RENAMED FILE, FROM " << js.at("old_name").get<std::string>() << " TO:"
+                      << js.at("new_name").get<std::string>() << std::endl;
             return j.dump();
         } else {
             json j = json{{"response", "ERRORE_RINOMINA_FILE"}};
@@ -1029,6 +899,12 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 for (auto &invitedUsername : invited)
                     sendAtClientUsername(j.dump(), invitedUsername);
 
+            std::cout << SocketManager::output() << "CLIENT " << this->getId();
+            if (shared_from_this()->getUsername() != "")
+                std::cout << " ("
+                          << shared_from_this()->getUsername() << ")";
+            std::cout << " DELETED FILE, OWNER: " << js.at("owner").get<std::string>() << " FILE: "
+                      << js.at("name").get<std::string>() << std::endl;
             return j.dump();
         } else {
             json j = json{{"response", "ERRORE_ELIMINAZIONE_FILE"}};
@@ -1156,7 +1032,8 @@ void HandleRequest::sendAtClientUsername(const std::string &response, const std:
     std::memcpy(msg.body(), response.data(), msg.body_length());
     msg.body()[msg.body_length()] = '\0';
     msg.encode_header();
-    std::cout << SocketManager::output() << "RESPONSE TO CLIENT " << participant->getId() << " ("
-              << participant->getUsername() << "): " << msg.body() << std::endl;
+    if (debugOutput)
+        std::cout << SocketManager::output() << "RESPONSE TO CLIENT " << participant->getId() << " ("
+                  << participant->getUsername() << "): " << msg.body() << std::endl;
     participant->deliver(msg);
 }

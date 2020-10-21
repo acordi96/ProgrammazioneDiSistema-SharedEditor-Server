@@ -226,12 +226,9 @@ bool Server::removeUsernameFromFile(const std::string &filename, const std::stri
 
 void Server::modFile(const std::string &filename, bool force, int mods) {
     //std::locale::global(std::locale(""));
-    if (!force) {
-        if (nModsBeforeWrite == -1) {
-            return;
-        } else {
-            this->modsPerFile.at(filename) += mods;
-        }
+    this->modsPerFile.at(filename) += mods;
+    if (!force && nModsBeforeWrite == -1) {
+        return;
     }
     if (this->modsPerFile.at(filename) >= nModsBeforeWrite || force) {
         char toWriteReadable[this->symbolsPerFile.at(filename).size()];
