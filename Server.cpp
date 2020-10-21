@@ -351,10 +351,10 @@ void Server::eraseSymbolCRDT(std::vector<Symbol> symbolsToErase, const std::stri
     int lastFound = 0;
     for (auto iterSymbolsToErase = symbolsToErase.begin();
          iterSymbolsToErase != symbolsToErase.end(); ++iterSymbolsToErase) {
-        if ((lastFound - 2) >= 0)
+        /*if ((lastFound - 2) >= 0)
             lastFound -= 2;
         else if ((lastFound - 1) >= 0)
-            lastFound--;
+            lastFound--;*/
         int count = lastFound;
         bool foundSecondPart = false;
         for (auto iterSymbols = this->symbolsPerFile.at(filename).begin() + lastFound; iterSymbols !=
@@ -372,6 +372,7 @@ void Server::eraseSymbolCRDT(std::vector<Symbol> symbolsToErase, const std::stri
             for (auto iterSymbols = this->symbolsPerFile.at(filename).begin();
                  iterSymbols != this->symbolsPerFile.at(filename).begin() + lastFound; ++iterSymbols) {
                 if (*iterSymbolsToErase == *iterSymbols) {
+                    std::cout << "AAA" << std::endl;
                     this->symbolsPerFile.at(filename).erase(iterSymbols);
                     lastFound = count;
                     break;
