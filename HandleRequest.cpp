@@ -925,6 +925,8 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
         std::string resDB = ManagementDB::getInstance().handleEditProfile(username, email, newPassword,
                                                                           oldPassword, color);
         if (resDB == "EDIT_SUCCESS") {
+            if(!color.empty())
+                shared_from_this()->setColor(color);
             json j = json{{"response", resDB},
                           {"username", username},
                           {"email",    email},
