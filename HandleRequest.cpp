@@ -603,6 +603,10 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 sendAtClient(j.dump());
 
             } else { //prima volta che il file viene aperto (lettura da file)
+
+                std::cout << SocketManager::output() << "CLIENT " << this->getId() << " ("
+                          << this->getUsername() << ") OPEN (NEW) FILE: " << filename << std::endl;
+
                 Server::getInstance().openFile(filename, shared_from_this()->getUsername());
                 std::ifstream file;
                 file.open(filename);
@@ -730,9 +734,6 @@ std::string HandleRequest::handleRequestType(const json &js, const std::string &
                 allSizeStandard ? j["sizeDefault"] = "" : j["size"] = styleSize;
 
                 sendAtClient(j.dump());
-
-                std::cout << SocketManager::output() << "CLIENT " << this->getId() << " ("
-                          << this->getUsername() << ") OPEN (NEW) FILE (" << dim << " char): " << filename << std::endl;
 
             }
             //Server::getInstance().printCRDT(filename); //debug
